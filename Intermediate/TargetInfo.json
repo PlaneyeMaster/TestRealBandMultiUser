@@ -1,0 +1,14 @@
+{
+	"Targets": [
+		{
+			"Name": "RealBandMultiUser",
+			"Path": "C:\\Projects\\RealBandMultiUser 5.1\\Source\\RealBandMultiUser.Target.cs",
+			"Type": "Game"
+		},
+		{
+			"Name": "RealBandMultiUserEditor",
+			"Path": "C:\\Projects\\RealBandMultiUser 5.1\\Source\\RealBandMultiUserEditor.Target.cs",
+			"Type": "Editor"
+		}
+	]
+}
