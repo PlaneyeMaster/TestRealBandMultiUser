@@ -1,0 +1,20 @@
+{
+	"version": 1,
+	"changelists": [
+		{
+			"guid": "00000000000000000000000000000000",
+			"description": "Default Uncontrolled Changelist",
+			"files": [
+				"C:/Projects/RealBandMultiUser 5.1/Content/StarterContent/Blueprints/Blueprint_CeilingLight.uasset",
+				"C:/Projects/RealBandMultiUser 5.1/Content/StarterContent/Audio/Collapse01.uasset",
+				"C:/Projects/RealBandMultiUser 5.1/Content/StarterContent/Architecture/Floor_400x400.uasset",
+				"C:/Projects/RealBandMultiUser 5.1/Content/StarterContent/HDRI/HDRI_Epic_Courtyard_Daylight.uasset",
+				"C:/Projects/RealBandMultiUser 5.1/Content/StarterContent/Maps/Advanced_Lighting_BuiltData.uasset",
+				"C:/Projects/RealBandMultiUser 5.1/Content/StarterContent/Particles/P_Ambient_Dust.uasset",
+				"C:/Projects/RealBandMultiUser 5.1/Content/StarterContent/Props/MaterialSphere.uasset",
+				"C:/Projects/RealBandMultiUser 5.1/Content/StarterContent/Maps/Minimal_Default.umap",
+				"C:/Projects/RealBandMultiUser 5.1/Content/StarterContent/Materials/M_AssetPlatform.uasset"
+			]
+		}
+	]
+}

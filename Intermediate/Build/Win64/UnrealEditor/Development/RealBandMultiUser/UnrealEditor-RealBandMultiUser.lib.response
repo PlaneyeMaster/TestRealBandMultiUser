@@ -1,0 +1,15 @@
+/NOLOGO
+/errorReport:prompt
+/MACHINE:x64
+/SUBSYSTEM:WINDOWS
+/DEF
+/NAME:"UnrealEditor-RealBandMultiUser.dll"
+/IGNORE:4221
+/NODEFAULTLIB
+"C:\Projects\RealBandMultiUser 5.1\Intermediate\Build\Win64\RealBandMultiUserEditor\Development\Engine\SharedPCH.Engine.ShadowErrors.h.obj"
+"C:\Projects\RealBandMultiUser 5.1\Intermediate\Build\Win64\UnrealEditor\Development\RealBandMultiUser\RealBandMultiUser.init.gen.cpp.obj"
+"C:\Projects\RealBandMultiUser 5.1\Intermediate\Build\Win64\UnrealEditor\Development\RealBandMultiUser\RealBandMultiUserGameModeBase.gen.cpp.obj"
+"C:\Projects\RealBandMultiUser 5.1\Intermediate\Build\Win64\UnrealEditor\Development\RealBandMultiUser\RealBandMultiUser.cpp.obj"
+"C:\Projects\RealBandMultiUser 5.1\Intermediate\Build\Win64\UnrealEditor\Development\RealBandMultiUser\RealBandMultiUserGameModeBase.cpp.obj"
+"C:\Projects\RealBandMultiUser 5.1\Intermediate\Build\Win64\UnrealEditor\Development\RealBandMultiUser\Default.rc2.res"
+/OUT:"C:\Projects\RealBandMultiUser 5.1\Intermediate\Build\Win64\UnrealEditor\Development\RealBandMultiUser\UnrealEditor-RealBandMultiUser.lib"
