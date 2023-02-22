@@ -1,9 +1,0 @@
-{
-	"SourceFiles": [
-		"C:\\Projects\\RealBandMultiUser 5.1\\Source\\RealBandMultiUser\\RealBandMultiUser.Build.cs",
-		"C:\\Projects\\RealBandMultiUser 5.1\\Plugins\\BackUp\\Source\\BackUp\\BackUp.Build.cs",
-		"C:\\Projects\\RealBandMultiUser 5.1\\Source\\RealBandMultiUser.Target.cs",
-		"C:\\Projects\\RealBandMultiUser 5.1\\Source\\RealBandMultiUserEditor.Target.cs"
-	],
-	"EngineVersion": "5.1.0"
-}
