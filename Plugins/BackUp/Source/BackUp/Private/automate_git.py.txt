@@ -1,0 +1,40 @@
+import sys
+import subprocess
+import git
+
+
+def is_git_repo(path):
+    try:
+        _ = git.Repo(path).git_dir
+        return True
+    except git.exc.InvalidGitRepositoryError:
+        return False
+
+# `git init new_repo`
+
+repo_name = sys.argv[1]
+user = sys.argv[2]
+
+if !is_git_repo(sys.argv[1]):
+    repo_name = git.Repo.init(sys.argv[1])
+    subprocess.call(["git", "remote add origin", "https://github.com/PlaneyeMaster/%s/%s.git" % user % repo_name])
+    subprocess.call(["git", "push --tags"])
+else:
+    subprocess.call(["git", "clone", "https://github.com/PlaneyeMaster/%s/%s.git" % user % repo_name])
+    subprocess.call(["git", "pull"])
+    subprocess.call(["git", "submodule", "update", "--init", "--recursive"])
+
+    
+
+
+
+
+
+
+
+
+# subprocess.call(["git", "clone", "https://github.com/user/%s.git" % repo_name])
+# subprocess.call(["git", "clone", "https://github.com/%s/%s.git" % user % repo_name])
+# subprocess.call(["git", "pull"])
+# subprocess.call(["git", "checkout", "origin/main"])
+# subprocess.call(["git", "submodule", "update", "--init", "--recursive"])
