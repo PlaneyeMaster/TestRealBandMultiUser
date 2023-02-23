@@ -1,9 +1,8 @@
-/.vs
-./Binaries
-./Config
-./Content
-./DerivedDataCache
-./Intermediate
-./Platforms
-./Saved
-./.vs
+.vs/
+Binaries/
+Config/
+Content/
+DerivedDataCache/
+Intermediate/
+Platforms/
+Saved/
