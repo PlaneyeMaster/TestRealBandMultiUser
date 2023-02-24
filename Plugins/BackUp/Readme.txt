@@ -12,6 +12,8 @@ Tools Required:
     3.1) Open git bash console
     3.2) Type the command 
           pip install GitPython
+4) All the users should have access permission to the github repositories
+
 
 Create Git Repository 
 =====================
@@ -32,4 +34,14 @@ Create Git Repository
 13) go to the git bash shell
 14) git remote add origin https://github.com/PlaneyeMaster/nDisplayDemo.git
 15) git push -u origin master
+
+Cloning Git Repository
+======================
+Once the repository is created , any user who wants to work on that project needs to have that project on his machine .Follow the steps
+
+1) Create a Folder
+2) open git bash
+3) change directory to that folder
+4) give the command 
+   git clone https://github.com/PlaneyeMaster/nDisplayDemo.git
     

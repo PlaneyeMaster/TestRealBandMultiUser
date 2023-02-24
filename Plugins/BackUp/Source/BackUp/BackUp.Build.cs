@@ -23,7 +23,8 @@ public class BackUp : ModuleRules
 			new string[] {
 				// ... add other private include paths required here ...
 				Path.Combine(EngineDirectory, @"Plugins/Developer/Concert/ConcertApp/MultiUserClient/Source/MultiUserClient/Public"),
-                Path.Combine(EngineDirectory, @"Plugins/Messaging/UdpMessaging/Source/UdpMessaging/Public/Shared")
+                Path.Combine(EngineDirectory, @"Plugins/Messaging/UdpMessaging/Source/UdpMessaging/Public/Shared"),
+                Path.Combine(EngineDirectory, @"Plugins/Developer/GitSourceControl/Source/GitSourceControl/Private/")
             }
 			);
 
@@ -60,7 +61,8 @@ public class BackUp : ModuleRules
                 "EditorWidgets",
                 "PropertyEditor",
 				"Messaging",
-                "UdpMessaging"
+                "UdpMessaging",
+                "GitSourceControl"
                 //"WindowsTargetPlatform",
                 //"DesktopPlatform"
 				
@@ -95,7 +97,8 @@ public class BackUp : ModuleRules
                 "UnrealEd",
                 "HTTP",
 				"Messaging",
-                "UdpMessaging"
+                "UdpMessaging",
+                "GitSourceControl"
                // "WindowsTargetPlatform", // For ECompilerVersion
                // "DesktopPlatform"
 				// ... add private dependencies that you statically link with here ...	

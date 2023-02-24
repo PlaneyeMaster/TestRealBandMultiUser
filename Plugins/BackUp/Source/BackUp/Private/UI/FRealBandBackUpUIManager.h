@@ -43,7 +43,7 @@ public:
 	virtual ~FRealBandBackUpUIManagerImpl();
 	void Initialize();
 	void CreateWidgetWindow();
-	FString InitSourceVersionControl();
+	bool InitSourceVersionControl();
 	void InitMultiUserEditorControls();
 	void OnServersAssumedReady();
 	void HandleSyncSessionStartup(const IConcertSyncClient* SyncClient);
@@ -51,6 +51,7 @@ public:
 	void OnSessionConnectionChanged(IConcertClientSession& Session, EConcertConnectionStatus Status);
 	FReply JoinSession();
 	FReply Save();
+	FReply Sync();
 };
 
 
