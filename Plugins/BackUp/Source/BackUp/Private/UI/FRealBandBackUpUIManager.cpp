@@ -34,11 +34,13 @@
 #include "../../../../Engine/Plugins\Developer\Concert\ConcertUI\ConcertSharedSlate\Source\ConcertSharedSlate\Public\ConcertFrontendUtils.h"
 #include "../../../../Engine/Plugins\Developer\Concert\ConcertUI\ConcertSharedSlate\Source\ConcertSharedSlate\Public\Session\Browser\SConcertSessionBrowser.h"
 
+//Git
+#include "../../../../Engine/Plugins\Developer\GitSourceControl\Source\GitSourceControl\Private\GitSourceControlModule.h"
+#include "../../../../Engine/Plugins\Developer\GitSourceControl\Source\GitSourceControl\Private\GitSourceControlUtils.h"
+#include "SourceControl\Public\SourceControlOperations.h"
 
-// Server
-#include "../../../../Engine/\Plugins\Developer\Concert\ConcertApp\MultiUserServer\Source\MultiUserServer\Public\IMultiUserServerModule.h"
-
-
+#include "Widgets/Notifications/SNotificationList.h"
+#include "Framework/Notifications/NotificationManager.h"
 //#include <windows.h>
 #include <Lmcons.h>
 
@@ -110,13 +112,18 @@ void FRealBandBackUpUIManager::Initialize()
 	}
 
 
-	IMultiUserClientModule& MultiUserClientModule = IMultiUserClientModule::Get();
+	//IMultiUserClientModule& MultiUserClientModule = IMultiUserClientModule::Get();
 //	if (!MultiUserClientModule.GetClient()->GetConcertClient()->IsStarted())
 	{
 		FString ProjectFileName = FApp::GetProjectName() + FString(".uproject");
 		FString ProjectFilePath = FPaths::ProjectDir() / ProjectFileName;
 		ProjectFilePath = FPaths::ConvertRelativePathToFull(ProjectFilePath);
-		FString projDir = Instance->InitSourceVersionControl();
+		bool isSuccess = Instance->InitSourceVersionControl();
+		if (!isSuccess)
+		{
+			FMessageDialog::Open(EAppMsgType::Ok, FText::FromString(L"Failed to Initialize source control. Check the Debug Output"));
+			return;
+		}
 		Instance->InitMultiUserEditorControls();
 		Instance->Initialize();
 	}
@@ -297,7 +304,7 @@ void FRealBandBackUpUIManagerImpl::CreateWidgetWindow()
 							 .HAlign(HAlign_Center)
 						     .VAlign(VAlign_Center)
 						     .Text(FText::FromString("Sync"))
-						 ////			.OnClicked(this, &FRealBandUIManagerImpl::OnLocal)
+						     .OnClicked(this, &FRealBandBackUpUIManagerImpl::Sync)
 
 						 ]
 					 + SCanvas::Slot()
@@ -606,6 +613,65 @@ void FRealBandBackUpUIManagerImpl::HandleConcertSyncClientCreated(TSharedRef<ICo
 }
 
 
+FReply FRealBandBackUpUIManagerImpl::Sync()
+{
+	FGitSourceControlModule& GitSourceControl = FModuleManager::LoadModuleChecked<FGitSourceControlModule>("GitSourceControl");
+	
+	// TODO: At the moment there is no implementation to find local files modified . Sync might fail if some files are 
+	//       checked out . They need to be manually commited/stashed/discarded before sync can work 
+	//FString FullPath = FPaths::ProjectDir();
+	//if (FullPath.EndsWith(TEXT("/")))
+	//{
+	//	FullPath.RemoveAt(FullPath.Len() - 1, 1);
+	//}
+
+	//TArray<FSourceControlChangelistRef> Changelists = GitSourceControl.GetProvider().GetChangelists(EStateCacheUsage::ForceUpdate);
+	//FString texStatus = GitSourceControl.GetProvider().GetNumLocalChanges();
+	//{
+	//	UE_LOG(LogTemp, Log, TEXT("=======Commit the local changes =============="));
+	//}
+
+	//TArray<FString> FileArray;
+	//FileArray.Add(FPaths::ConvertRelativePathToFull(FullPath));
+	//TSharedRef<FGetFileList, ESPMode::ThreadSafe> FileListOperation = ISourceControlOperation::Create<FGetFileList>();
+	//ECommandResult::Type ResultOp = GitSourceControl.GetProvider().Execute(FileListOperation, FileArray, EConcurrency::Synchronous);
+	//bool bSuccess = (ResultOp == ECommandResult::Succeeded);
+	//
+
+	TSharedRef<FSync, ESPMode::ThreadSafe> SyncOperation = ISourceControlOperation::Create<FSync>();
+	ECommandResult::Type Result = GitSourceControl.GetProvider().Execute(SyncOperation,
+		                          TArray<FString>(), EConcurrency::Synchronous);
+	
+	if (Result == ECommandResult::Succeeded)
+	{
+		const FText NotificationText = FText::Format(
+			LOCTEXT("SourceControlMenu_Success", "Sucess: {1} operation "),
+			FText::FromName(FName("Sync"))
+		);
+		FNotificationInfo Info(NotificationText);
+		Info.ExpireDuration = 8.0f;
+		FSlateNotificationManager::Get().AddNotification(Info);
+		UE_LOG(LogTemp, Display, TEXT("%s"), *NotificationText.ToString());
+	}
+	else
+	{
+		// Report failure with a notification 
+		const FText NotificationText = FText::Format(
+			LOCTEXT("SourceControlMenu_Failure", "Error: {0} operation failed!"),
+			FText::FromName(FName("Sync"))
+		);
+		
+		FNotificationInfo Info(NotificationText);
+		Info.ExpireDuration = 8.0f;
+		FSlateNotificationManager::Get().AddNotification(Info);
+		UE_LOG(LogTemp, Error, TEXT("%s"), *NotificationText.ToString());
+		
+	}
+
+	return FReply::Handled();
+}
+
+
 FReply FRealBandBackUpUIManagerImpl::Save()
 {
 	TArray<TSharedPtr<FConcertSessionClientInfo>> Clients;
@@ -735,14 +801,33 @@ void FRealBandBackUpUIManagerImpl::OnSessionConnectionChanged(IConcertClientSess
 }
 
 
-FString FRealBandBackUpUIManagerImpl::InitSourceVersionControl()
+bool FRealBandBackUpUIManagerImpl::InitSourceVersionControl()
 {
-	//FString PythonPath = FPaths::ConvertRelativePathToFull(FPaths::Combine(FPaths::EngineDir(), TEXT("Binaries/ThirdParty/Python/Win64/python.exe")));
-	//FString ScriptPath = FPaths::Combine(IPluginManager::Get().FindPlugin("Backup")->GetBaseDir(), TEXT("automate_git.py"));
+	// check Git availability
+	FGitSourceControlModule& GitSourceControl = FModuleManager::LoadModuleChecked<FGitSourceControlModule>("GitSourceControl");
+	GitSourceControl.GetProvider().Init();
+	if (!GitSourceControl.GetProvider().IsGitAvailable())
+	{
+		FMessageDialog::Open(EAppMsgType::Ok, FText::FromString(L"Failed to find Git Bash installation"));
+		return false;
+	}
 
-	//FPlatformProcess::ApplicationSettingsDir().GetExecutablePath
+	FString remoteUrl = GitSourceControl.GetProvider().GetRemoteUrl();
+	if (remoteUrl.IsEmpty())
+	{
+		UE_LOG(LogTemp, Error, TEXT("Remote Git Url not configured"));
+		FMessageDialog::Open(EAppMsgType::Ok, FText::FromString(L"Remote Git Url not configured"));
+		return false;
+	}
 
+	
 
+	//GitSourceControlUtils::RunUpdateStatus()
+	//if (GitSourceControlUtils::FindGitBinaryPath().IsEmpty())
+	//{
+	//	FMessageDialog::Open(EAppMsgType::Ok, FText::FromString(L"Failed to find Git Bash installation"));
+	//	return false;
+	//}
 
 	FString PythonExecutable;// = TEXT("python");
 	GetPythonPath(PythonExecutable);
@@ -750,13 +835,10 @@ FString FRealBandBackUpUIManagerImpl::InitSourceVersionControl()
 	if (PythonExecutable.IsEmpty())
 	{
 		FMessageDialog::Open(EAppMsgType::Ok, FText::FromString(L"Failed to find Python Installation"));
-		return PythonExecutable;
+		return false;
 	}
 
-	//FString ScriptArguments = TEXT("nDisplayDemo Sameer");
-	FString ScriptArguments ;
 	FString ScriptPath = FPaths::ConvertRelativePathToFull(FPaths::ProjectPluginsDir()).Append("BackUp/automate_git.py");
-	//FString ScriptPath = "C:\\Projects\\automate_git.py";
 	
 	bool isValidPath = FPaths::FileExists(ScriptPath);
 	if (isValidPath)
@@ -769,68 +851,56 @@ FString FRealBandBackUpUIManagerImpl::InitSourceVersionControl()
 	else
 	{
 		UE_LOG(LogTemp, Error, TEXT("InValid Path"));
+		return false;
 	}
 
-	//FString Command = FString::Printf(TEXT("%s %s %s"), *PythonExecutable, *ScriptPath, *ScriptArguments);
-	//FString Command = FString::Printf(TEXT("%s %s"), *PythonExecutable, *ScriptPath);
-
-	FString Command = FString::Printf(TEXT("\"%s\" \"%s\""), *PythonExecutable, *ScriptPath);
-
+	FString projectPath = FPaths::ConvertRelativePathToFull(FPaths::ProjectDir());
+	if (projectPath.EndsWith(TEXT("/")))
+	{
+		projectPath.RemoveAt(projectPath.Len() - 1, 1);
+	}
+	FString ScriptArguments = projectPath;
+	FString Command = FString::Printf(TEXT("\"%s\" \"%s\" \"%s\""), *PythonExecutable, *ScriptPath, *ScriptArguments);
 	int Output=-1;
 	FString Error;
 	FString stdOut;
 	int32 ReturnCode = -1;
 	FPlatformProcess::ExecProcess(*Command, *ScriptArguments, &Output, &stdOut, &Error);
 
-	FProcHandle ProcHandle  = FPlatformProcess::CreateProc(*Command, nullptr, true, false, false, nullptr, 0, nullptr, nullptr);
-
-	if (ProcHandle.IsValid())
+	if (Output != 0)
 	{
-		FPlatformProcess::CloseProc(ProcHandle);
-	}
-	else
-	{
-		UE_LOG(LogTemp, Error, TEXT("Failed to launch Python script."));
-	}
-
-	if (ReturnCode != 0)
-	{
-		UE_LOG(LogTemp, Error, TEXT("Python script execution failed with return code %d. Error message: %s"), ReturnCode, *Error);
-		return Error;
-	}
-	else
-	{
-		UE_LOG(LogTemp, Display, TEXT("Python script executed successfully. Output: %s"), *stdOut);
-		
+		UE_LOG(LogTemp, Error, TEXT("Failed to update the repository %s"), *projectPath);
+		UE_LOG(LogTemp, Error, TEXT("Error Reported %s"), *stdOut);
+		return false;
 	}
 
 
-	ISourceControlModule& SourceControlModule = FModuleManager::LoadModuleChecked<ISourceControlModule>("SourceControl");
-	ProjectDirHandle.BindLambda([this]() { 
-		//return FString(TEXT("path/to/source/control/project/root"));
-		FString projectPath = FPaths::ConvertRelativePathToFull(FPaths::ProjectDir());
-		if (projectPath.EndsWith(TEXT("/")))
-		{
-			projectPath.RemoveAt(projectPath.Len() - 1, 1);
-		}
-		return projectPath;
-		//return FPaths::ConvertRelativePathToFull(FPaths::ProjectDir());
-		});
-	
-	SourceControlModule.RegisterSourceControlProjectDirDelegate(ProjectDirHandle);
-	FString srcPrjDir = SourceControlModule.GetSourceControlProjectDir();
-	UE_LOG(LogTemp, Display, TEXT("Project Dir registered with Source Control %s"), *srcPrjDir);
-	SourceControlModule.SetProvider("Git");
-	SourceControlModule.SetUseGlobalSettings(false);
-	
-	ISourceControlProvider & srcctrlProvider = SourceControlModule.GetProvider();
-	//SourceControlModule.GetProvider().Login()
+	//ISourceControlModule& SourceControlModule = FModuleManager::LoadModuleChecked<ISourceControlModule>("SourceControl");
+	//ProjectDirHandle.BindLambda([this]() { 
+	//	//return FString(TEXT("path/to/source/control/project/root"));
+	//	FString projectPath = FPaths::ConvertRelativePathToFull(FPaths::ProjectDir());
+	//	if (projectPath.EndsWith(TEXT("/")))
+	//	{
+	//		projectPath.RemoveAt(projectPath.Len() - 1, 1);
+	//	}
+	//	return projectPath;
+	//	//return FPaths::ConvertRelativePathToFull(FPaths::ProjectDir());
+	//	});
+	//
+	//SourceControlModule.RegisterSourceControlProjectDirDelegate(ProjectDirHandle);
+	//FString srcPrjDir = SourceControlModule.GetSourceControlProjectDir();
+	//UE_LOG(LogTemp, Display, TEXT("Project Dir registered with Source Control %s"), *srcPrjDir);
+	//SourceControlModule.SetProvider("Git");
+	//SourceControlModule.SetUseGlobalSettings(false);
+	//
+	//ISourceControlProvider & srcctrlProvider = SourceControlModule.GetProvider();
+	////SourceControlModule.GetProvider().Login()
 
-	FString providerName = srcctrlProvider.GetName().GetPlainNameString();
+	//FString providerName = srcctrlProvider.GetName().GetPlainNameString();
 
-	bool bIsEnabled = SourceControlModule.IsEnabled();
+	//bool bIsEnabled = SourceControlModule.IsEnabled();
 
-	return srcPrjDir;
+	return true;
 }
 	
 void FRealBandBackUpUIManagerImpl::GetPythonPath(FString& oPythonPath)

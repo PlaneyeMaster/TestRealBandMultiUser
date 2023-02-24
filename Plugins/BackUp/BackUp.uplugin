@@ -33,6 +33,10 @@
 		{
 			"Name": "UdpMessaging",
 			"Enabled": true
+		},
+		{
+			"Name": "GitSourceControl",
+			"Enabled": true
 		}
 	]
 }
