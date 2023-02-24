@@ -645,7 +645,7 @@ FReply FRealBandBackUpUIManagerImpl::Sync()
 	if (Result == ECommandResult::Succeeded)
 	{
 		const FText NotificationText = FText::Format(
-			LOCTEXT("SourceControlMenu_Success", "Sucess: {1} operation "),
+			LOCTEXT("SourceControlMenu_Success", "Operation Sucess: {1} operation "),
 			FText::FromName(FName("Sync"))
 		);
 		FNotificationInfo Info(NotificationText);
