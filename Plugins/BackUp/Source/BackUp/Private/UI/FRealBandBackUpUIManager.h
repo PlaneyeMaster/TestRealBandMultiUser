@@ -16,6 +16,7 @@ class IConcertSyncClient;
 class URealBandConfig;
 class SConcertSessionBrowser;
 class IConcertClientSession;
+class IConcertSessionBrowserController;
 //struct EConcertConnectionStatus;
 
 DECLARE_LOG_CATEGORY_EXTERN(LogManager, Log, All);
@@ -30,14 +31,18 @@ private:
 	TSharedPtr<SWindow> pDialogMainWindow;
 	TSharedPtr<SOverlay> pOverlay;
 	TSharedPtr<SCanvas> pCanvas;
+	TSharedPtr<SButton> pJoinBtn;
 	void SetupMenuItem();
 	void FillToolbar(FToolBarBuilder& ToolbarBuilder);
 	TSharedPtr<IConcertSyncClient> pConcertSyncClient;
+	TSharedPtr<IConcertSessionBrowserController> SessionController;
 	URealBandConfig* pURealBandConfig;
 	FGuid ServerId;
 	TSharedPtr < SConcertSessionBrowser> ConcertSessionBrowser;
 	FSourceControlProjectDirDelegate ProjectDirHandle;
 	void GetPythonPath(FString& oPythonPath);
+	FString remoteUrl;
+	bool isHostMachine;
 public:
 
 	virtual ~FRealBandBackUpUIManagerImpl();
@@ -49,7 +54,11 @@ public:
 	void HandleSyncSessionStartup(const IConcertSyncClient* SyncClient);
 	void HandleConcertSyncClientCreated(TSharedRef<IConcertSyncClient> Client);
 	void OnSessionConnectionChanged(IConcertClientSession& Session, EConcertConnectionStatus Status);
+	/** Invoked when the session connection state is changed. */
+	void HandleSessionConnectionChanged(IConcertClientSession& InSession, EConcertConnectionStatus ConnectionStatus);
 	FReply JoinSession();
+	void TestJoinSession(const FGuid& iServer, const FGuid& iClient);
+	//void OnSessionConnectionChanged(IConcertClientSession& InSession, EConcertConnectionStatus ConnectionStatus);
 	FReply Save();
 	FReply Sync();
 };

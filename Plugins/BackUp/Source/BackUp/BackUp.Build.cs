@@ -14,7 +14,11 @@ public class BackUp : ModuleRules
 				// ... add public include paths required here ...
 				Path.Combine(EngineDirectory, @"Plugins/Developer/Concert/ConcertApp/MultiUserClient/Source/MultiUserClient/Public"),
                 Path.Combine(EngineDirectory, @"Plugins/Developer/Concert/ConcertSync/ConcertSyncClient/Source/ConcertSyncClient/Public"),
-                Path.Combine(EngineDirectory, @"Plugins/Messaging/UdpMessaging/Source/UdpMessaging/Public/Shared")
+                Path.Combine(EngineDirectory, @"Plugins/Messaging/UdpMessaging/Source/UdpMessaging/Public/Shared"),
+                Path.Combine(EngineDirectory, @"Plugins/VirtualProduction/Takes/Source/TakeRecorder/Public"),
+                Path.Combine(EngineDirectory, @"Plugins/VirtualProduction/Takes/Source/TakeTrackRecorders/Public"),
+                Path.Combine(EngineDirectory, @"Plugins/Developer/Concert/ConcertSync/ConcertSyncServer/Source/ConcertSyncServer/Public")
+
             }
 			);
 				
@@ -62,7 +66,10 @@ public class BackUp : ModuleRules
                 "PropertyEditor",
 				"Messaging",
                 "UdpMessaging",
-                "GitSourceControl"
+                "GitSourceControl",
+                "TakeMovieScene",
+                "Sockets"
+                
                 //"WindowsTargetPlatform",
                 //"DesktopPlatform"
 				
@@ -98,7 +105,8 @@ public class BackUp : ModuleRules
                 "HTTP",
 				"Messaging",
                 "UdpMessaging",
-                "GitSourceControl"
+                "GitSourceControl",
+                "TakeMovieScene"
                // "WindowsTargetPlatform", // For ECompilerVersion
                // "DesktopPlatform"
 				// ... add private dependencies that you statically link with here ...	
@@ -109,6 +117,7 @@ public class BackUp : ModuleRules
 		DynamicallyLoadedModuleNames.AddRange(
 			new string[]
 			{
+             
 				// ... add any modules that your module loads dynamically here ...
 			}
 			);

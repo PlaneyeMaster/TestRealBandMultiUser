@@ -1,7 +1,7 @@
 {
 	"FileVersion": 3,
 	"Version": 1,
-	"VersionName": "1.0",
+	"VersionName": "3.0",
 	"FriendlyName": "BackUp",
 	"Description": "",
 	"Category": "Other",
@@ -20,6 +20,7 @@
 			"Type": "Editor",
 			"LoadingPhase": "Default"
 		}
+
 	],
 	"Plugins": [
 		{
@@ -36,6 +37,14 @@
 		},
 		{
 			"Name": "GitSourceControl",
+			"Enabled": true
+		},
+		{
+			"Name": "MultiUserTakes",
+			"Enabled": true
+		},
+		{
+			"Name": "Takes",
 			"Enabled": true
 		}
 	]

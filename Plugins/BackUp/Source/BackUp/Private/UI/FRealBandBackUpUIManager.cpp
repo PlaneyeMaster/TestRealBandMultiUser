@@ -18,12 +18,17 @@
 #include "LevelEditor.h"
 
 //#include "MultiUserServerModule.h"
+#include "IMultiUserServerModule.h"
 #include "Blutility/Classes/EditorUtilityWidget.h"
 #include "Blutility/Classes/EditorUtilityObject.h"
 
 #include "../../../../Engine/Plugins/Developer/Concert/ConcertMain/Source/Concert/Public/ConcertSettings.h"
 #include "../../../../Engine/Plugins/Developer/Concert/ConcertMain/Source/Concert/Public/IConcertClient.h"
 #include "../../../../Engine/Plugins/Developer/Concert/ConcertSync/ConcertSyncClient/Source/ConcertSyncClient/Public/IConcertSyncClient.h"
+#include "IConcertClientWorkspace.h"
+#include "../../../../Engine/Plugins/Developer\Concert\ConcertSync\ConcertSyncServer\Source\ConcertSyncServer\Public\IConcertSyncServerModule.h"
+
+
 #include "../../../../Engine/Plugins/Developer/Concert/ConcertSync/ConcertSyncClient/Source/ConcertSyncClient/Public/IConcertSyncClientModule.h"
 #include "../../../../Engine/Plugins/Developer/Concert/ConcertApp/MultiUserClient/Source/MultiUserClient/Public/IMultiUserClientModule.h"
 #include "../../../../Engine/Plugins/Developer\Concert\ConcertUI\ConcertSharedSlate\Source\ConcertSharedSlate\Public/ConcertFrontendStyle.h"
@@ -33,6 +38,10 @@
 #include "../../../../Engine/Source/Editor/ContentBrowser/Private/SContentBrowser.h"
 #include "../../../../Engine/Plugins\Developer\Concert\ConcertUI\ConcertSharedSlate\Source\ConcertSharedSlate\Public\ConcertFrontendUtils.h"
 #include "../../../../Engine/Plugins\Developer\Concert\ConcertUI\ConcertSharedSlate\Source\ConcertSharedSlate\Public\Session\Browser\SConcertSessionBrowser.h"
+#include "../../../../Engine/Plugins\Developer\Concert\ConcertUI\ConcertSharedSlate\Source\ConcertSharedSlate\Public\Session\Browser\IConcertSessionBrowserController.h"
+#include "SessionServices/Public/ISessionServicesModule.h"
+
+//#include "../../../../Engine/Plugins\VirtualProduction\MultiUserTakes\Source\ConcertTakeRecorder\Private\ConcertTakeRecorderMessages.h"
 
 //Git
 #include "../../../../Engine/Plugins\Developer\GitSourceControl\Source\GitSourceControl\Private\GitSourceControlModule.h"
@@ -84,9 +93,11 @@ FRealBandBackUpUIManagerImpl::~FRealBandBackUpUIManagerImpl()
 	pDialogMainWindow.Reset();
 	pOverlay.Reset();
 	pCanvas.Reset();
-	
-	FRealBandBackUpUIManager::Instance.Reset();
-	FRealBandBackUpUIManager::Instance = nullptr;
+	if (FRealBandBackUpUIManager::Instance)
+	{
+		FRealBandBackUpUIManager::Instance.Reset();
+		FRealBandBackUpUIManager::Instance = nullptr;
+	}
 }
 void FRealBandBackUpUIManagerImpl::Initialize()
 {
@@ -116,6 +127,7 @@ void FRealBandBackUpUIManager::Initialize()
 //	if (!MultiUserClientModule.GetClient()->GetConcertClient()->IsStarted())
 	{
 		FString ProjectFileName = FApp::GetProjectName() + FString(".uproject");
+		
 		FString ProjectFilePath = FPaths::ProjectDir() / ProjectFileName;
 		ProjectFilePath = FPaths::ConvertRelativePathToFull(ProjectFilePath);
 		bool isSuccess = Instance->InitSourceVersionControl();
@@ -183,6 +195,9 @@ void FRealBandBackUpUIManagerImpl::FillToolbar(FToolBarBuilder& ToolbarBuilder)
 //
 void FRealBandBackUpUIManagerImpl::CreateWidgetWindow()
 {
+
+	FString rUserName = FPlatformProcess::UserName();
+	FString repoName = FApp::GetProjectName();
 //	bool bIsVisible = false;
 	if (!pDialogMainWindow )
 	{
@@ -225,6 +240,18 @@ void FRealBandBackUpUIManagerImpl::CreateWidgetWindow()
 			             //.TextStyle(FTextBlockStyle)
                          ////			.OnClicked(this, &FRealBandUIManagerImpl::OnLocal)
 			          ]
+		             + SCanvas::Slot()
+			           .HAlign(HAlign_Fill)
+			           .VAlign(VAlign_Fill)
+			           .Size(FVector2D(120.0f, 100.0f))
+			           .Position(FVector2D(140.0f, 45.0f))
+			           [
+				          SNew(STextBlock)
+						  .Text(FText::FromString(rUserName))
+			              .TextStyle(FAppStyle::Get(), "NormalText")
+			             //.TextStyle(FTextBlockStyle)
+			            
+			            ]
 					 + SCanvas::Slot()
 		               .HAlign(HAlign_Fill)
 		               .VAlign(VAlign_Fill)
@@ -256,7 +283,7 @@ void FRealBandBackUpUIManagerImpl::CreateWidgetWindow()
 			              SNew(SEditableText)
 						  .ColorAndOpacity(FLinearColor::Black)
 						  .Font(FAppStyle::GetFontStyle("Regular"))
-						  
+						  .Text(FText::FromString(remoteUrl))
 						]
 						  //.Style
 		//.Font(FCoreStyle::Get().GetFontStyle(TEXT("PropertyWindow.NormalFont")))
@@ -286,7 +313,8 @@ void FRealBandBackUpUIManagerImpl::CreateWidgetWindow()
 						 .Size(FVector2D(120.0f, 50.0f))
 						 .Position(FVector2D(180.0f, 180.0f))
 						 [
-							 SNew(SButton)
+							 SAssignNew(pJoinBtn, SButton)
+							// SNew(SButton)
 							 .HAlign(HAlign_Center)
 						 .VAlign(VAlign_Center)
 						 .Text(FText::FromString("JOIN"))
@@ -392,11 +420,49 @@ void FRealBandBackUpUIManagerImpl::InitMultiUserEditorControls()
 //	if (pDialogMainWindow)
 	{
 		//FString Role = TEXT("MultiUser");
-		FConcertFrontendStyle::Initialize();
 
+		// check for Host 
+	
+		// UDP settings for client 
+		FConfigFile* EngineConfig = GConfig ? GConfig->FindConfigFileWithBaseName(FName(TEXT("Engine"))) : nullptr;
+		if (EngineConfig)
+		{
+			TArray<FString> Settings;
+			FString Setting;
+			// Unicast endpoint setting
+			EngineConfig->GetString(TEXT("/Script/UdpMessaging.UdpMessagingSettings"), TEXT("UnicastEndpoint"), Setting);
+			if (Setting != "0.0.0.0:0" && !Setting.IsEmpty())
+			{
+				//check if its the same as my hostname 
+				FString hostName = FString(FPlatformProcess::ComputerName());
+			
+				ISocketSubsystem* SocketSubsystem = ISocketSubsystem::Get();
+
+				bool bCanBindAll;
+				TSharedPtr<class FInternetAddr> HostAddr = ISocketSubsystem::Get(PLATFORM_SOCKETSUBSYSTEM)->GetLocalHostAddr(*GLog, bCanBindAll);
+				uint32 HostIp = 0;
+				HostAddr->GetIp(HostIp); // Will return in host order
+				FString iAddr = HostAddr->ToString(true);
+				if (iAddr == Setting)
+				{
+					isHostMachine = true;
+					UE_LOG(LogTemp, Display, TEXT("%hs: ==HOST MACHINE =="), __FUNCTION__);
+				}
+				else
+				{
+					isHostMachine = false;
+					UE_LOG(LogTemp, Display, TEXT("%hs: ==CLIENT MACHINE =="), __FUNCTION__);
+				}
+
+			}
+
+		}
+
+		FConcertFrontendStyle::Initialize();
 		IMultiUserClientModule& MultiUserClientModule = IMultiUserClientModule::Get();
 		if (MultiUserClientModule.IsConcertServerRunning())
 		{
+			UE_LOG(LogTemp, Display, TEXT("%hs: ==The ConcertServer is discovered. Connect the default client=="), __FUNCTION__);
 			const TSharedPtr<IConcertSyncClient> ConcertSyncClient = IConcertSyncClientModule::Get().GetClient(TEXT("MultiUser"));
 			if (!ConcertSyncClient)
 			{
@@ -409,10 +475,7 @@ void FRealBandBackUpUIManagerImpl::InitMultiUserEditorControls()
 			pURealBandConfig = GetMutableDefault<URealBandConfig>();
 			if (pURealBandConfig && !pConcertSyncClient)
 			{
-
 				pConcertSyncClient = pURealBandConfig->CreateConcertClient();
-				//OnServersAssumedReady();
-				// Try to connect to an existing session even if we launched a new server
 				TArray<FConcertServerInfo> ServerList = pConcertSyncClient->GetConcertClient()->GetKnownServers();
 				//		TArray<FConcertServerInfo> ServerList = MultiUserClientModule.GetClient()->GetConcertClient()->GetKnownServers();
 				// Need to differnciate between a client ans server 
@@ -452,8 +515,37 @@ void FRealBandBackUpUIManagerImpl::InitMultiUserEditorControls()
 		pURealBandConfig = GetMutableDefault<URealBandConfig>();
 		if (pURealBandConfig )
 		{
-			pURealBandConfig->FindOrLaunchConcertServer();
-			pConcertSyncClient = pURealBandConfig->GetBackupClient();
+			if (isHostMachine)
+			{
+				UE_LOG(LogTemp, Log, TEXT("=======HOST machine ...Launch Concert Server =============="));
+				pURealBandConfig->FindOrLaunchConcertServer();
+				pConcertSyncClient = pURealBandConfig->GetBackupClient();
+			}
+			else
+			{
+				pConcertSyncClient = MultiUserClientModule.GetClient();
+				if (pConcertSyncClient->GetConcertClient()->GetKnownServers().Num() > 0)
+				{
+					UE_LOG(LogTemp, Log, TEXT("=======Known Servers for Client Found=============="));
+					UConcertClientConfig* ClientConfig = NewObject<UConcertClientConfig>();
+					ClientConfig->bIsHeadless = true;
+					ClientConfig->bInstallEditorToolbarButton = true;
+					ClientConfig->bAutoConnect = true;
+					ClientConfig->DefaultServerURL = FApp::GetProjectName();;
+					//ClientConfig->DefaultSessionName = BackupSessionName;
+					//ClientConfig->DefaultSaveSessionAs = BackupSessionName;
+					ClientConfig->ClientSettings.AvatarColor = FLinearColor(1.0, 0.0, 0.0);
+					ClientConfig->ClientSettings.DisplayName = FPlatformProcess::UserName();
+					ClientConfig->EndpointSettings.RemoteEndpointTimeoutSeconds = 0; // Ensure the endpoints never time out (and are kept alive automatically by Concert).
+					//ClientConfig->ClientSettings.ClientAuthenticationKey = BackupServerName; // The server adds its own server name to the list of authorized client keys, use that key to authorize this client on the server.
+					pConcertSyncClient->GetConcertClient()->Configure(ClientConfig);
+				}
+				pConcertSyncClient->GetConcertClient()->Startup();
+				pConcertSyncClient->GetConcertClient()->StartDiscovery();
+				//pConcertSyncClient = pURealBandConfig->CreateConcertClient();
+				UE_LOG(LogTemp, Log, TEXT("=======Client machine ...=============="));
+			}
+			//pConcertSyncClient = pURealBandConfig->GetBackupClient();
 			pConcertSyncClient->GetConcertClient()->OnKnownServersUpdated().AddRaw(
 					this, &FRealBandBackUpUIManagerImpl::OnServersAssumedReady);
 
@@ -461,12 +553,34 @@ void FRealBandBackUpUIManagerImpl::InitMultiUserEditorControls()
 			for (TSharedRef<IConcertSyncClient> Client : IConcertSyncClientModule::Get().GetClients())
 			{
 				Client->OnSyncSessionStartup().AddRaw(this, &FRealBandBackUpUIManagerImpl::HandleSyncSessionStartup);
+				Client->GetConcertClient()->OnSessionConnectionChanged().AddRaw(this, &FRealBandBackUpUIManagerImpl::OnSessionConnectionChanged);
 					//Client->OnSyncSessionShutdown().AddRaw(this, &FRealBandBackUpUIManagerImpl::HandleSyncSessionShutdown);
 			}
 
 		}
 		
 	}
+}
+
+
+void FRealBandBackUpUIManagerImpl::OnSessionConnectionChanged(IConcertClientSession& InSession, EConcertConnectionStatus ConnectionStatus)
+{
+	switch (ConnectionStatus)
+	{
+	    case EConcertConnectionStatus::Connected:
+		     pJoinBtn->SetEnabled(false);
+		     break;
+		case EConcertConnectionStatus::Disconnected:
+			 pJoinBtn->SetEnabled(true);
+			 break;
+     
+	}
+}
+
+void FRealBandBackUpUIManagerImpl::HandleSessionConnectionChanged(IConcertClientSession& InSession,
+	                                                               EConcertConnectionStatus ConnectionStatus)
+{
+	int debug = 1;
 }
 
 
@@ -496,7 +610,9 @@ void FRealBandBackUpUIManagerImpl::OnServersAssumedReady()
 
 				if (MultiUserClientModule.IsConcertServerRunning())
 				{
-					
+				
+					pConcertSyncClient->GetConcertClient()->OnSessionConnectionChanged().AddSP(this, &FRealBandBackUpUIManagerImpl::HandleSessionConnectionChanged);
+
 					pConcertSyncClient->GetConcertClient()->GetServerSessions(ServerId).
 						Next([iConcertSyncClient = pConcertSyncClient,iServerId = ServerId](FConcertAdmin_GetAllSessionsResponse Response)
 						{
@@ -508,8 +624,15 @@ void FRealBandBackUpUIManagerImpl::OnServersAssumedReady()
 										EConcertConnectionStatus::Disconnected)
 									{
 										iConcertSyncClient->GetConcertClient()->StartAutoConnect();
-										iConcertSyncClient->GetConcertClient()->JoinSession(iServerId, SessionInfo.SessionId);
-										UE_LOG(LogTemp, Log, TEXT("=======JOINED EXISTING SESSION =============="));
+										TFuture<EConcertResponseCode> Response = 
+											        iConcertSyncClient->GetConcertClient()->JoinSession(iServerId, SessionInfo.SessionId);
+
+										//JoinSession(iServerId, SessionInfo.SessionId);
+									//	if (Response.Get() == EConcertResponseCode::Success)
+										{
+											UE_LOG(LogTemp, Log, TEXT("=======JOINED EXISTING SESSION =============="));
+										}
+
 										IMultiUserClientModule& MultiUserClientModule = IMultiUserClientModule::Get();
 										if (MultiUserClientModule.GetClient()->GetConcertClient()->IsOwnerOf(SessionInfo))
 										{
@@ -530,7 +653,61 @@ void FRealBandBackUpUIManagerImpl::OnServersAssumedReady()
 				}
 				else
 				{
-					pConcertSyncClient->GetConcertClient()->CreateSession(ServerId, sessionArgs);
+								
+					/// <summary>
+					/// 
+					/// </summary>
+					
+					
+					if (isHostMachine)
+					{
+						UE_LOG(LogTemp, Log, TEXT("======= Create Session for the Server  =============="));
+						pConcertSyncClient->GetConcertClient()->CreateSession(ServerId, sessionArgs);
+					}
+					else
+					{
+						UE_LOG(LogTemp, Log, TEXT("======= Join Session for the known Server  =============="));
+						pConcertSyncClient = MultiUserClientModule.GetClient();
+						//TODO: Set the color for users to Green except the host client which is red
+						const UConcertClientConfig* pClientConfig = pConcertSyncClient->GetConcertClient()->GetConfiguration();
+						UConcertClientConfig* ClientConfig = NewObject<UConcertClientConfig>();
+						ClientConfig->ClientSettings = pClientConfig->ClientSettings;
+						ClientConfig->ClientSettings.AvatarColor = FLinearColor(0.0, 1.0, 0.0);
+						ClientConfig->ClientSettings.DisplayName = FPlatformProcess::UserName();
+						pConcertSyncClient->GetConcertClient()->Configure(ClientConfig);
+
+						pConcertSyncClient->GetConcertClient()->GetServerSessions(ServerId).
+							Next([iConcertSyncClient = pConcertSyncClient, iServerId = ServerId](FConcertAdmin_GetAllSessionsResponse Response)
+							{
+									if (Response.ResponseCode == EConcertResponseCode::Success)
+									{
+										for (const FConcertSessionInfo& SessionInfo : Response.LiveSessions)
+										{
+											if (iConcertSyncClient->GetConcertClient()->GetSessionConnectionStatus() ==
+												EConcertConnectionStatus::Disconnected)
+											{
+											//	iConcertSyncClient->GetConcertClient()->StartAutoConnect();
+												iConcertSyncClient->GetConcertClient()->JoinSession(iServerId, SessionInfo.SessionId);
+												UE_LOG(LogTemp, Log, TEXT("=======JOINED EXISTING SESSION =============="));
+												IMultiUserClientModule& MultiUserClientModule = IMultiUserClientModule::Get();
+												if (MultiUserClientModule.GetClient()->GetConcertClient()->IsOwnerOf(SessionInfo))
+												{
+													//	iConcertSyncClient->GetConcertClient()->GetCurrentSession()->Connect();
+													UE_LOG(LogTemp, Log, TEXT("=======Client is the owner =============="));
+												}
+												else
+												{
+													UE_LOG(LogTemp, Log, TEXT("=======Server launched on  other machine =============="));
+												}
+											}
+										}
+
+
+									}
+							});
+
+
+					}
 				}
 			}
 		}
@@ -540,52 +717,20 @@ void FRealBandBackUpUIManagerImpl::OnServersAssumedReady()
 
 void FRealBandBackUpUIManagerImpl::HandleSyncSessionStartup(const IConcertSyncClient* SyncClient)
 {
-
-	/*FGuid CurrentSessionId = pConcertSyncClient->GetConcertClient()->GetCurrentSession()->GetId();
-	pConcertSyncClient->GetConcertClient()->JoinSession(ServerId, CurrentSessionId).
-		Next([](EConcertResponseCode Response)
-			{
-				if (Response == EConcertResponseCode::Success)
-				{
-					int debug = 1;
-				}
-
-			});*/
-	//pConcertSyncClient->GetConcertClient()->GetCurrentSession()->Connect();
-
-	//    pConcertSyncClient->GetConcertClient()->GetServerSessions(ServerId)
-	//	.Next([iSyncClient = pConcertSyncClient, iServerId = ServerId](FConcertAdmin_GetAllSessionsResponse Response)
-	//		{
-	//			FGuid DefaultSessionId;
-	//			if (Response.ResponseCode == EConcertResponseCode::Success)
-	//			{
-	//				// Find our default session IDs
-	//				for (const FConcertSessionInfo& SessionInfo : Response.LiveSessions)
-	//				{
-	//					//if (SessionInfo.SessionName == LocalSettings->DefaultSessionName)
-	//					if (SessionInfo.SessionName == "RealBandMultiUser")
-	//					{
-	//						DefaultSessionId = SessionInfo.SessionId;
-	//						if (DefaultSessionId.IsValid() && iSyncClient->GetConcertClient()->GetSessionConnectionStatus() == 
-	//							                                     EConcertConnectionStatus::Disconnected)
-	//						{
-
-	//							iSyncClient->GetConcertClient()->JoinSession(iServerId, DefaultSessionId);
-	//						}
-	//						iSyncClient->GetConcertClient()->GetCurrentSession()->Connect();
-	//						break;
-	//					}
-	//				}
-	//			}
-	//		});
-
-	
-	/*FGuid DefaultSessionId = pConcertSyncClient->GetConcertClient()->GetCurrentSession()->GetId();
-	if (DefaultSessionId.IsValid())
+	if (pConcertSyncClient && ServerId.IsValid())
 	{
-		
-		pConcertSyncClient->GetConcertClient()->JoinSession(ServerId, DefaultSessionId);
-	}*/
+		if (pConcertSyncClient->GetConcertClient()->GetCurrentSession()->GetConnectionStatus() == EConcertConnectionStatus::Connected)
+		{
+			int mdebug = 1;
+			int ndebug = 2;
+		}
+		if (TSharedPtr<IConcertClientWorkspace> Workspace = pConcertSyncClient ? pConcertSyncClient->GetWorkspace() : TSharedPtr<IConcertClientWorkspace>())
+		{
+			Workspace->SetIgnoreOnRestoreFlagForEmittedActivities(false);
+			Workspace->GetSession().Connect();
+		}
+	}
+
 	int test = 0;
 }
 
@@ -674,131 +819,84 @@ FReply FRealBandBackUpUIManagerImpl::Sync()
 
 FReply FRealBandBackUpUIManagerImpl::Save()
 {
-	TArray<TSharedPtr<FConcertSessionClientInfo>> Clients;
-	FConcertSessionClientInfo objClientInfo;
-	objClientInfo.ClientEndpointId = pConcertSyncClient->GetConcertClient()->GetCurrentSession()->GetSessionServerEndpointId();
-	objClientInfo.ClientInfo = pConcertSyncClient->GetConcertClient()->GetClientInfo();
+	FGitSourceControlModule& GitSourceControl = FModuleManager::LoadModuleChecked<FGitSourceControlModule>("GitSourceControl");
+	TArray<FString> Files;
+	//const FString& Directory;// = InFiles[0];
+	//FString gitBinaryPath = GitSourceControlUtils::FindGitBinaryPath();
+	//GitSourceControl.GetProvider().Execute()
+	//GitSourceControlUtils::RunCommit(gitBinaryPath,)
 
-	TSharedPtr<FConcertSessionClientInfo> ClientSharedObj = MakeShared<FConcertSessionClientInfo>(objClientInfo);
-	Clients.Push(ClientSharedObj);
 
-	TArray<TSharedPtr<FConcertSessionClientInfo>> LatestClientPtrs = Clients;
+	//const bool bResult = GitSourceControlUtils::ListFilesInDirectoryRecurse(InPathToGitBinary, InRepositoryRoot, Directory, Files);
 
-	ConcertFrontendUtils::SyncArraysByPredicate(Clients, MoveTemp(LatestClientPtrs), [](const TSharedPtr<FConcertSessionClientInfo>& ClientToFind)
-		{
-			return [ClientToFind](const TSharedPtr<FConcertSessionClientInfo>& PotentialClient)
-			{
-				return PotentialClient->ClientEndpointId == ClientToFind->ClientEndpointId;
-			};
-		});
+
+
+	TSharedRef<FUpdateStatus, ESPMode::ThreadSafe> SaveOperation = ISourceControlOperation::Create<FUpdateStatus>();
+	SaveOperation->SetUpdateModifiedState(true);
+	ECommandResult::Type Result = GitSourceControl.GetProvider().Execute(SaveOperation,
+		TArray<FString>(), EConcurrency::Synchronous);
+
+	if (Result == ECommandResult::Succeeded)
+	{
+		const FText NotificationText = FText::Format(
+			LOCTEXT("SourceControlMenu_Success", "Operation Sucess: {1} operation "),
+			FText::FromName(FName("Save"))
+		);
+		FNotificationInfo Info(NotificationText);
+		Info.ExpireDuration = 8.0f;
+		FSlateNotificationManager::Get().AddNotification(Info);
+		UE_LOG(LogTemp, Display, TEXT("%s"), *NotificationText.ToString());
+	}
+	else
+	{
+		// Report failure with a notification 
+		const FText NotificationText = FText::Format(
+			LOCTEXT("SourceControlMenu_Failure", "Save Error: {0} operation failed!"),
+			FText::FromName(FName("Save"))
+		);
+
+		FNotificationInfo Info(NotificationText);
+		Info.ExpireDuration = 8.0f;
+		FSlateNotificationManager::Get().AddNotification(Info);
+		UE_LOG(LogTemp, Error, TEXT("%s"), *NotificationText.ToString());
+
+	}
 
 	return FReply::Handled();
 }
 
 FReply FRealBandBackUpUIManagerImpl::JoinSession()
 {
-	
-	if (pConcertSyncClient && ServerId.IsValid())
+	if (pConcertSyncClient)
 	{
-		FGuid CurrentSessionId = pConcertSyncClient->GetConcertClient()->GetCurrentSession()->GetId();
-		pConcertSyncClient->GetConcertClient()->StartAutoConnect();
-		if (CurrentSessionId.IsValid())
-		{
-			//	TSharedPtr < SConcertSessionBrowser> ConcertSessionBrowser = nullptr;
-			//	FGlobalTabmanager::Get()->TryInvokeTab(FTabId(FName("ConcertBrowser")),true);
-			if (TSharedPtr<SDockTab> NewTab = FGlobalTabmanager::Get()->GetActiveTab())
-			{
-				ConcertSessionBrowser = StaticCastSharedRef<SConcertSessionBrowser>(NewTab->GetContent());
-				ConcertSessionBrowser->SetCanTick(true);
-			}
-			TSharedPtr<SDockTab> ActiveTab = FGlobalTabmanager::Get()->GetActiveTab();
-			if (ActiveTab.IsValid())
-			{
-				FString CurrentTab = FGlobalTabmanager::Get()->GetActiveTab()->GetLayoutIdentifier().ToString();
-				//	TSharedRef<SConcertBrowser> ContentBrowser = StaticCastSharedRef<SContentBrowser>(ActiveTab->GetContent());
-				//	FContentBrowserSelection  selectedItem;
-			//		selectedItem.SelectedFolders.Add(CurrentSessionId.ToString());
-
-				//	ContentBrowser->SyncTo(selectedItem);
-
-					// Do something with the content browser here
-			}
-
-
-			//	pConcertSyncClient->GetConcertClient()->OnSessionConnectionChanged().AddRaw(this, &FRealBandBackUpUIManagerImpl::OnSessionConnectionChanged);
-
-
-
-			pConcertSyncClient->GetConcertClient()->JoinSession(ServerId, CurrentSessionId).Next([](EConcertResponseCode Response)
+		pConcertSyncClient->GetConcertClient()->GetServerSessions(ServerId).
+			Next([iConcertSyncClient = pConcertSyncClient, iServerId = ServerId](FConcertAdmin_GetAllSessionsResponse Response)
 				{
-					if (Response == EConcertResponseCode::Success)
+					if (Response.ResponseCode == EConcertResponseCode::Success)
 					{
-						UE_LOG(LogTemp, Log, TEXT("=======Join session SUCCESS=============="));
-						int debug = 1;
+						for (const FConcertSessionInfo& SessionInfo : Response.LiveSessions)
+						{
+							if (iConcertSyncClient->GetConcertClient()->GetSessionConnectionStatus() ==
+								EConcertConnectionStatus::Disconnected)
+							{
+								//	iConcertSyncClient->GetConcertClient()->StartAutoConnect();
+								iConcertSyncClient->GetConcertClient()->JoinSession(iServerId, SessionInfo.SessionId);
+								UE_LOG(LogTemp, Log, TEXT("=======JOINED  SESSION =============="));
+								
+							}
+						}
 					}
-
-					if (Response == EConcertResponseCode::Failed)
-					{
-						UE_LOG(LogTemp, Log, TEXT("=======Join session FAILED=============="));
-						int debug = 1;
-
-					}
-
-					if (Response == EConcertResponseCode::TimedOut)
-					{
-						int debug = 1;
-					}
-
-					if (Response == EConcertResponseCode::UnknownRequest)
-					{
-						int debug = 1;
-					}
-
-					if (Response == EConcertResponseCode::InvalidRequest)
-					{
-						int debug = 1;
-					}
-
-					int m = 1;
-					int n = 2;
 				});
-			//	pDialogMainWindow->SetVisibility(EVisibility::Collapsed);
-			//	pDialogMainWindow->Minimize();
-			IMultiUserClientModule& MultiUserClientModule = IMultiUserClientModule::Get();
-			//	MultiUserClientModule.OpenBrowser();
-
-			TSharedPtr<SWidget> topWindow = FSlateApplication::Get().GetActiveTopLevelWindow();
-
-
-			TSharedPtr<SDockTab> bActiveTab = FGlobalTabmanager::Get()->GetActiveTab();
-			FText pText = FGlobalTabmanager::Get()->GetApplicationTitle();
-			FName tabLevel = bActiveTab->GetTag();
-
-			//	ConcertSessionBrowser = static_cast<SConcertSessionBrowser*>(bActiveTab->GetContent());
-		//		ConcertSessionBrowser = StaticCastSharedRef<SConcertSessionBrowser>(bActiveTab->GetContent());
-
-
-				/*SConcertSessionBrowser *ConcertSessionBrowser = Cast<SConcertSessionBrowser>(topWindow.Get());
-
-				if (ConcertSessionBrowser)
-				{
-					TArray<TSharedPtr<FConcertSessionTreeItem>> listSessions = ConcertSessionBrowser->GetSelectedItems();
-					ConcertSessionBrowser->RefreshSessionList();
-				}*/
-
-
-		}
-
 	}
-	//TSharedPtr<SWindow> ContainingWindow = FSlateApplication::Get().FindWidgetWindow(AsShared());
-	
 	return FReply::Handled();
 }
 
-void FRealBandBackUpUIManagerImpl::OnSessionConnectionChanged(IConcertClientSession& Session, EConcertConnectionStatus Status)
+
+void FRealBandBackUpUIManagerImpl::TestJoinSession(const FGuid& iServer, const FGuid& iClient)
 {
-	int debug = 1;
+
 }
+
 
 
 bool FRealBandBackUpUIManagerImpl::InitSourceVersionControl()
@@ -812,7 +910,7 @@ bool FRealBandBackUpUIManagerImpl::InitSourceVersionControl()
 		return false;
 	}
 
-	FString remoteUrl = GitSourceControl.GetProvider().GetRemoteUrl();
+	remoteUrl = GitSourceControl.GetProvider().GetRemoteUrl();
 	if (remoteUrl.IsEmpty())
 	{
 		UE_LOG(LogTemp, Error, TEXT("Remote Git Url not configured"));
@@ -838,7 +936,9 @@ bool FRealBandBackUpUIManagerImpl::InitSourceVersionControl()
 		return false;
 	}
 
-	FString ScriptPath = FPaths::ConvertRelativePathToFull(FPaths::ProjectPluginsDir()).Append("BackUp/automate_git.py");
+	
+	//FString ScriptPath = FPaths::ConvertRelativePathToFull(FPaths::ProjectPluginsDir()).Append("BackUp/automate_git.py");
+	FString ScriptPath = FPaths::ConvertRelativePathToFull(FPaths::EnginePluginsDir()).Append("BackUp/automate_git.py");
 	
 	bool isValidPath = FPaths::FileExists(ScriptPath);
 	if (isValidPath)
@@ -850,7 +950,7 @@ bool FRealBandBackUpUIManagerImpl::InitSourceVersionControl()
 	}
 	else
 	{
-		UE_LOG(LogTemp, Error, TEXT("InValid Path"));
+		UE_LOG(LogTemp, Error, TEXT("Invalid Path %s"), *ScriptPath);
 		return false;
 	}
 
@@ -861,16 +961,17 @@ bool FRealBandBackUpUIManagerImpl::InitSourceVersionControl()
 	}
 	FString ScriptArguments = projectPath;
 	FString Command = FString::Printf(TEXT("\"%s\" \"%s\" \"%s\""), *PythonExecutable, *ScriptPath, *ScriptArguments);
+	UE_LOG(LogTemp, Display, TEXT("Python Command  %s"), *Command);
 	int Output=-1;
 	FString Error;
 	FString stdOut;
 	int32 ReturnCode = -1;
-	FPlatformProcess::ExecProcess(*Command, *ScriptArguments, &Output, &stdOut, &Error);
+	FPlatformProcess::ExecProcess(*Command, *ScriptArguments, &ReturnCode, &stdOut, &Error);
 
-	if (Output != 0)
+	if (ReturnCode != 0)
 	{
 		UE_LOG(LogTemp, Error, TEXT("Failed to update the repository %s"), *projectPath);
-		UE_LOG(LogTemp, Error, TEXT("Error Reported %s"), *stdOut);
+		UE_LOG(LogTemp, Error, TEXT("Output %s Error %s ReturnCode %d"), *stdOut,*Error,ReturnCode);
 		return false;
 	}
 
