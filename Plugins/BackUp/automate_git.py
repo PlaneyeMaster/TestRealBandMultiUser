@@ -1,6 +1,7 @@
 import sys
 import subprocess
 import git
+import os
 
 def is_git_repo(path,user):
     try:
@@ -26,7 +27,16 @@ try:
         print("Not a Git Repository")
         exit
     else:
-        subprocess.call(["git", "pull"])
+        grepo = git.Repo(repo_name)
+        remotes = grepo.remotes
+        print(remotes[0].url)
+        #remoteurl =  git config --get remote.origin.url
+        subprocess.call(["git", "branch", "--set-upstream-to=origin/main", "main"])
+        print("Start Sync ....")
+        os.chdir(repo_name)
+        print(os.getcwd())
+        subprocess.call(["git", "pull","--all"])
+        #subprocess.call(["git", "pull","%s main" remotes[0].url)
         subprocess.call(["git", "submodule", "update", "--init", "--recursive"])
         print("Project Updated")        
 except git.exc.InvalidGitRepositoryError:

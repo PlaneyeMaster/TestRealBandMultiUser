@@ -46,7 +46,18 @@
 //Git
 #include "../../../../Engine/Plugins\Developer\GitSourceControl\Source\GitSourceControl\Private\GitSourceControlModule.h"
 #include "../../../../Engine/Plugins\Developer\GitSourceControl\Source\GitSourceControl\Private\GitSourceControlUtils.h"
+#include "../../../../Engine\Plugins\Developer\GitSourceControl\Source\GitSourceControl\Private\GitSourceControlSettings.h"
+
+
+#include "SourceControlHelpers.h"
 #include "SourceControl\Public\SourceControlOperations.h"
+#include "ISourceControlModule.h"
+#include "SourceControlWindows\Public\ISourceControlWindowsModule.h"
+#include "FileHelpers.h"
+#include "Misc/FileHelper.h"
+
+//C:\Program Files\Epic Games\UE_5.1\Engine\Source\Editor\SourceControlWindows\Public\SourceControlWindows.h
+#include "SourceControlWindows\Public\SourceControlWindows.h"
 
 #include "Widgets/Notifications/SNotificationList.h"
 #include "Framework/Notifications/NotificationManager.h"
@@ -77,9 +88,15 @@ TSharedPtr<FRealBandBackUpUIManagerImpl> FRealBandBackUpUIManager::Instance;
 //bool RemoveListenerAutolaunchEntry();
 #endif
 
+#include <direct.h>
 
+using namespace GitSourceControlUtils;
 
 #define LOCTEXT_NAMESPACE "RealBandBackUP"
+
+namespace RealBandMultiUser {
+	static constexpr int64 MaximumNumberOfActivities = 1000;
+};
 
 FRealBandBackUpUIManager::~FRealBandBackUpUIManager()
 {
@@ -89,7 +106,6 @@ FRealBandBackUpUIManager::~FRealBandBackUpUIManager()
 
 FRealBandBackUpUIManagerImpl::~FRealBandBackUpUIManagerImpl()
 {
-	
 	pDialogMainWindow.Reset();
 	pOverlay.Reset();
 	pCanvas.Reset();
@@ -98,6 +114,18 @@ FRealBandBackUpUIManagerImpl::~FRealBandBackUpUIManagerImpl()
 		FRealBandBackUpUIManager::Instance.Reset();
 		FRealBandBackUpUIManager::Instance = nullptr;
 	}
+
+	// need to disable the source control as there is a known issue of delay in launch of the project if source control is enabled 
+	FSourceControlModule& SourceControlModule = FSourceControlModule::Get();
+	
+	SourceControlModule.SetProvider("None");
+	SourceControlModule.UnregisterSourceControlProjectDirDelegate();
+
+	const FString& IniFile = SourceControlHelpers::GetSettingsIni();
+	FString SettingsSection = TEXT("GitSourceControl.GitSourceControlSettings");
+	
+
+	
 }
 void FRealBandBackUpUIManagerImpl::Initialize()
 {
@@ -130,12 +158,20 @@ void FRealBandBackUpUIManager::Initialize()
 		
 		FString ProjectFilePath = FPaths::ProjectDir() / ProjectFileName;
 		ProjectFilePath = FPaths::ConvertRelativePathToFull(ProjectFilePath);
+
+		std::wstring currwdir;
+		TCHAR buffer[MAX_PATH] = { 0 };
+		GetModuleFileName(NULL, buffer, MAX_PATH);
+		std::wstring::size_type pos = std::wstring(buffer).find_last_of(L"\\/");
+		currwdir = std::wstring(buffer).substr(0, pos);
+
 		bool isSuccess = Instance->InitSourceVersionControl();
 		if (!isSuccess)
 		{
 			FMessageDialog::Open(EAppMsgType::Ok, FText::FromString(L"Failed to Initialize source control. Check the Debug Output"));
 			return;
 		}
+		//Instance->Save();
 		Instance->InitMultiUserEditorControls();
 		Instance->Initialize();
 	}
@@ -244,7 +280,7 @@ void FRealBandBackUpUIManagerImpl::CreateWidgetWindow()
 			           .HAlign(HAlign_Fill)
 			           .VAlign(VAlign_Fill)
 			           .Size(FVector2D(120.0f, 100.0f))
-			           .Position(FVector2D(140.0f, 45.0f))
+			           .Position(FVector2D(250.0f, 45.0f))
 			           [
 				          SNew(STextBlock)
 						  .Text(FText::FromString(rUserName))
@@ -270,7 +306,7 @@ void FRealBandBackUpUIManagerImpl::CreateWidgetWindow()
 	                + SCanvas::Slot()
 		              .HAlign(HAlign_Fill)
 		              .VAlign(VAlign_Fill)
-		              .Size(FVector2D(170.0f, 20.0f))
+		              .Size(FVector2D(400.0f, 20.0f)) // 170, 20
 		              .Position(FVector2D(250.0f, 80.0f))
 		              [
 						  SNew(SBorder)
@@ -279,39 +315,40 @@ void FRealBandBackUpUIManagerImpl::CreateWidgetWindow()
 						 // .HAlign(HAlign_Center)
 						 // .VAlign(VAlign_Center)
 						  .Padding(FMargin(0.2f))
+						  
 						[
 			              SNew(SEditableText)
 						  .ColorAndOpacity(FLinearColor::Black)
 						  .Font(FAppStyle::GetFontStyle("Regular"))
 						  .Text(FText::FromString(remoteUrl))
+						  .MinDesiredWidth(250.0f)
+						  
 						]
 						  //.Style
 		//.Font(FCoreStyle::Get().GetFontStyle(TEXT("PropertyWindow.NormalFont")))
 		            //      .TextStyle(FAppStyle::Get(), "NormalText")
 
 		//.TextStyle(FTextBlockStyle)
-////			.OnClicked(this, &FRealBandUIManagerImpl::OnLocal)
 
 		              ]
 
-			         + SCanvas::Slot()
-			          .HAlign(HAlign_Fill)
-			          .VAlign(VAlign_Fill)
-			          .Size(FVector2D(120.0f, 50.0f))
-			          .Position(FVector2D(30.0f, 180.0f))
-			          [
-				        SNew(SButton)
-				       .HAlign(HAlign_Center)
-			           .VAlign(VAlign_Center)
-			           .Text(FText::FromString("Start Backup"))
-////			.OnClicked(this, &FRealBandUIManagerImpl::OnLocal)
+			        // + SCanvas::Slot()
+			        //  .HAlign(HAlign_Fill)
+			        //  .VAlign(VAlign_Fill)
+			        //  .Size(FVector2D(120.0f, 50.0f))
+			        //  .Position(FVector2D(30.0f, 180.0f))
+			        //  [
+				       // SNew(SButton)
+				       //.HAlign(HAlign_Center)
+			        //   .VAlign(VAlign_Center)
+			        //   .Text(FText::FromString("Start Backup"))
 
-			           ]
+			        //   ]
 					 + SCanvas::Slot()
 						 .HAlign(HAlign_Fill)
 						 .VAlign(VAlign_Fill)
 						 .Size(FVector2D(120.0f, 50.0f))
-						 .Position(FVector2D(180.0f, 180.0f))
+						 .Position(FVector2D(250.0f, 180.0f))
 						 [
 							 SAssignNew(pJoinBtn, SButton)
 							// SNew(SButton)
@@ -326,7 +363,7 @@ void FRealBandBackUpUIManagerImpl::CreateWidgetWindow()
 						 .HAlign(HAlign_Fill)
 						 .VAlign(VAlign_Fill)
 						 .Size(FVector2D(70.0f, 40.0f))
-						 .Position(FVector2D(450.0f, 68.0f))
+						 .Position(FVector2D(660.0f, 68.0f))
 						 [
 							 SNew(SButton)
 							 .HAlign(HAlign_Center)
@@ -339,7 +376,7 @@ void FRealBandBackUpUIManagerImpl::CreateWidgetWindow()
 						 .HAlign(HAlign_Fill)
 						 .VAlign(VAlign_Fill)
 						 .Size(FVector2D(70.0f, 40.0f))
-						 .Position(FVector2D(550.0f, 68.0f))
+						 .Position(FVector2D(760.0f, 68.0f))
 						 [
 							 SNew(SButton)
 							 .HAlign(HAlign_Center)
@@ -382,15 +419,18 @@ void FRealBandBackUpUIManagerImpl::CreateWidgetWindow()
 ////			}));
 ////
 	}
-////	else
-////	{
+	else
+	{
+	    UE_LOG(LogTemp, Display, TEXT("%hs: ==Main Dialog Window =="), __FUNCTION__);
+	    pDialogMainWindow->BringToFront();
+		pDialogMainWindow->SetVisibility(EVisibility::Visible);
 ////		if (!pDialogMainWindow->IsVisible())
 ////		{
 ////			pDialogMainWindow->SetVisibility(EVisibility::All);
 ////			pFRealBandAssetLoader->SetVisibility(EVisibility::Visible);
 ////			pRealBandImportSettings->SetVisibility(EVisibility::Visible);
 ////		}
-////    }
+    }
 //////	pDialogMainWindow->SetOnWindowClosed(FRequestDestroyWindowOverride::CreateSP(this, &FRealBandUIManagerImpl::OnDialogClosed));
 ////
 ////
@@ -460,6 +500,7 @@ void FRealBandBackUpUIManagerImpl::InitMultiUserEditorControls()
 
 		FConcertFrontendStyle::Initialize();
 		IMultiUserClientModule& MultiUserClientModule = IMultiUserClientModule::Get();
+		
 		if (MultiUserClientModule.IsConcertServerRunning())
 		{
 			UE_LOG(LogTemp, Display, TEXT("%hs: ==The ConcertServer is discovered. Connect the default client=="), __FUNCTION__);
@@ -549,9 +590,13 @@ void FRealBandBackUpUIManagerImpl::InitMultiUserEditorControls()
 			pConcertSyncClient->GetConcertClient()->OnKnownServersUpdated().AddRaw(
 					this, &FRealBandBackUpUIManagerImpl::OnServersAssumedReady);
 
+			pConcertSyncClient->GetConcertClient()->OnSessionConnectionChanged().AddSP(this, &FRealBandBackUpUIManagerImpl::HandleSessionConnectionChanged);
+			
+
 			IConcertSyncClientModule::Get().OnClientCreated().AddRaw(this, &FRealBandBackUpUIManagerImpl::HandleConcertSyncClientCreated);
 			for (TSharedRef<IConcertSyncClient> Client : IConcertSyncClientModule::Get().GetClients())
 			{
+				
 				Client->OnSyncSessionStartup().AddRaw(this, &FRealBandBackUpUIManagerImpl::HandleSyncSessionStartup);
 				Client->GetConcertClient()->OnSessionConnectionChanged().AddRaw(this, &FRealBandBackUpUIManagerImpl::OnSessionConnectionChanged);
 					//Client->OnSyncSessionShutdown().AddRaw(this, &FRealBandBackUpUIManagerImpl::HandleSyncSessionShutdown);
@@ -569,6 +614,14 @@ void FRealBandBackUpUIManagerImpl::OnSessionConnectionChanged(IConcertClientSess
 	{
 	    case EConcertConnectionStatus::Connected:
 		     pJoinBtn->SetEnabled(false);
+			 if (pConcertSyncClient)
+			 {
+				 const TSharedPtr<IConcertClientWorkspace> WorkspacePtr = pConcertSyncClient->GetWorkspace();
+				 if (WorkspacePtr)
+				 {
+					WorkspacePtr->OnActivityAddedOrUpdated().AddRaw(this, &FRealBandBackUpUIManagerImpl::HandleActivityAddedOrUpdated);
+				 }
+			 }
 		     break;
 		case EConcertConnectionStatus::Disconnected:
 			 pJoinBtn->SetEnabled(true);
@@ -577,10 +630,64 @@ void FRealBandBackUpUIManagerImpl::OnSessionConnectionChanged(IConcertClientSess
 	}
 }
 
+
+void FRealBandBackUpUIManagerImpl::HandleActivityAddedOrUpdated(const FConcertClientInfo& InClientInfo, 
+	                                                            const FConcertSyncActivity& InActivity, 
+	                                                             const FStructOnScope& InActivitySummary)
+{
+	const TSharedPtr<IConcertClientWorkspace> WorkspacePtr = pConcertSyncClient->GetWorkspace();
+	if (WorkspacePtr)
+	{
+		const int64 LastActivityId = WorkspacePtr->GetLastActivityId();
+		const int64 FirstActivityIdToFetch = FMath::Max<int64>(1, LastActivityId - RealBandMultiUser::MaximumNumberOfActivities);
+
+		TMap<FGuid, FConcertClientInfo>   EndpointClientInfoMap;
+		TArray<FConcertSessionActivity> FetchedActivities;
+		WorkspacePtr->GetActivities(FirstActivityIdToFetch, 100, EndpointClientInfoMap, FetchedActivities);
+		FString userName = FPlatformProcess::UserName();
+		FString SessionId = FString::Printf(TEXT("%s"), *pConcertSyncClient->GetWorkspace()->GetSession().GetId().ToString());
+		FString SummarySessionFile = FPaths::ConvertRelativePathToFull(FPaths::ProjectDir()) + FApp::GetProjectName() + FString("_") + SessionId;
+		TArray<FString> SummaryStrings;
+		for (FConcertSessionActivity& activity : FetchedActivities)
+		{
+			FString eventDateTime = activity.Activity.EventTime.ToString(TEXT("%d.%m.%Y %H:%M:%S :"));
+			//activity.ActivitySummary->ToDisplayText()
+			FText Summary = activity.ActivitySummary->ToDisplayText(FText::FromString(userName));
+
+			SummaryStrings.Add(eventDateTime + Summary.ToString());
+		}
+
+		if (!FFileHelper::SaveStringArrayToFile(SummaryStrings, *SummarySessionFile))
+		{
+			UE_LOG(LogTemp, Error, TEXT("Failed to save session Activities"));
+		}
+	}
+	else
+	{
+		UE_LOG(LogTemp, Error, TEXT("Workspace not found"));
+	}
+}
+
+
 void FRealBandBackUpUIManagerImpl::HandleSessionConnectionChanged(IConcertClientSession& InSession,
 	                                                               EConcertConnectionStatus ConnectionStatus)
 {
 	int debug = 1;
+
+	if (ConnectionStatus == EConcertConnectionStatus::Disconnected)
+	{
+		// Get the source control module
+		ISourceControlModule& SourceControlModule = FModuleManager::LoadModuleChecked<ISourceControlModule>("SourceControl");
+
+		// Set the provider to "none"
+		//SourceControlModule.GetProvider().Execute<FNullSourceControlCommand>(FNullSourceControlCommandArgs());
+
+		// Save the provider setting
+		SourceControlModule.SetProvider(TEXT("None"));
+	}
+
+	
+
 }
 
 
@@ -610,8 +717,7 @@ void FRealBandBackUpUIManagerImpl::OnServersAssumedReady()
 
 				if (MultiUserClientModule.IsConcertServerRunning())
 				{
-				
-					pConcertSyncClient->GetConcertClient()->OnSessionConnectionChanged().AddSP(this, &FRealBandBackUpUIManagerImpl::HandleSessionConnectionChanged);
+				//	pConcertSyncClient->GetConcertClient()->OnSessionConnectionChanged().AddSP(this, &FRealBandBackUpUIManagerImpl::HandleSessionConnectionChanged);
 
 					pConcertSyncClient->GetConcertClient()->GetServerSessions(ServerId).
 						Next([iConcertSyncClient = pConcertSyncClient,iServerId = ServerId](FConcertAdmin_GetAllSessionsResponse Response)
@@ -646,6 +752,8 @@ void FRealBandBackUpUIManagerImpl::OnServersAssumedReady()
 									}
 								}
 
+
+								
 
 							}
 						});
@@ -699,6 +807,9 @@ void FRealBandBackUpUIManagerImpl::OnServersAssumedReady()
 												{
 													UE_LOG(LogTemp, Log, TEXT("=======Server launched on  other machine =============="));
 												}
+
+											    
+
 											}
 										}
 
@@ -709,7 +820,10 @@ void FRealBandBackUpUIManagerImpl::OnServersAssumedReady()
 
 					}
 				}
+
+				
 			}
+			
 		}
 	}
 	
@@ -721,6 +835,7 @@ void FRealBandBackUpUIManagerImpl::HandleSyncSessionStartup(const IConcertSyncCl
 	{
 		if (pConcertSyncClient->GetConcertClient()->GetCurrentSession()->GetConnectionStatus() == EConcertConnectionStatus::Connected)
 		{
+			;
 			int mdebug = 1;
 			int ndebug = 2;
 		}
@@ -729,14 +844,12 @@ void FRealBandBackUpUIManagerImpl::HandleSyncSessionStartup(const IConcertSyncCl
 			Workspace->SetIgnoreOnRestoreFlagForEmittedActivities(false);
 			Workspace->GetSession().Connect();
 		}
+		
 	}
-
-	int test = 0;
 }
 
 void FRealBandBackUpUIManagerImpl::HandleConcertSyncClientCreated(TSharedRef<IConcertSyncClient> Client)
 {
-	int test = 0;
 	TArray<TSharedPtr<FConcertSessionClientInfo>> Clients;
 	FConcertSessionClientInfo objClientInfo;
 	/*objClientInfo.ClientEndpointId = Client->GetConcertClient()->GetCurrentSession()->GetSessionServerEndpointId();
@@ -762,6 +875,88 @@ FReply FRealBandBackUpUIManagerImpl::Sync()
 {
 	FGitSourceControlModule& GitSourceControl = FModuleManager::LoadModuleChecked<FGitSourceControlModule>("GitSourceControl");
 	
+	FName SourceControlFeatureName("SourceControl");
+	TArray<ISourceControlProvider*> Providers = IModularFeatures::Get().GetModularFeatureImplementations<ISourceControlProvider>(SourceControlFeatureName);
+	for (auto It(Providers.CreateIterator()); It; It++)
+	{
+		ISourceControlProvider* Provider = *It;
+		FString sProviderName = Provider->GetName().GetPlainNameString();
+		if (sProviderName == "None")
+		{
+			int debug = 1;
+		}
+	}
+
+	//TArray<FString> FileArray;
+	//TArray<FString> outFileArray;
+
+	//FString FullPath = FPaths::ProjectDir();
+	//if (FullPath.EndsWith(TEXT("/")))
+	//{
+	//	FullPath.RemoveAt(FullPath.Len() - 1, 1);
+	//}
+
+	//FileArray.Add(FPaths::ConvertRelativePathToFull(FullPath));
+
+	//bool bSuccess = false;
+	//ISourceControlProvider& SourceControlProvider = ISourceControlModule::Get().GetProvider();
+	//SourceControlProvider.Init();
+	//TSharedRef<FGetFileList, ESPMode::ThreadSafe> Operation = ISourceControlOperation::Create<FGetFileList>();
+	//
+	//ECommandResult::Type ResultFile = SourceControlProvider.Execute(Operation, FileArray, EConcurrency::Synchronous);
+	//bSuccess = (ResultFile == ECommandResult::Succeeded);
+	//if (bSuccess)
+	//{
+	//	outFileArray = Operation->GetFilesList();
+	//	TSharedRef<FCheckIn, ESPMode::ThreadSafe> CheckInOperation = ISourceControlOperation::Create<FCheckIn>();
+	//	GitSourceControl.GetProvider().Execute(CheckInOperation);
+	//}
+	
+	FSourceControlModule& SourceControlModule = FSourceControlModule::Get();
+	if (SourceControlModule.IsEnabled())
+	{
+		FString gitBinaryPath;
+		GetGitBinaryPath(gitBinaryPath);
+		std::string myString = TCHAR_TO_UTF8(*gitBinaryPath);
+		myString = "\"" + myString + "\\cmd\\git\"";
+		std::string params = "pull";
+		std::string fullCommand = myString + " " + params;
+
+		FString FullPath = FPaths::ProjectDir();
+		if (_chdir(TCHAR_TO_UTF8(*FullPath)) == -1) {
+			UE_LOG(LogTemp, Error, TEXT("Failed to change directory to: %s"), TCHAR_TO_UTF8(*FullPath));
+			return FReply::Handled();
+		}
+
+		//ISourceControlModule& SourceControlModule = ISourceControlModule::Get();
+
+		// Get the current provider
+		//ISourceControlProvider & SourceControlProvider = SourceControlModule.GetProvider();
+		
+		
+		// Get the current Git branch name
+		FString BranchName;
+		//SourceControlProvider->Execute(TEXT("CURRENT_BRANCH"), BranchName, EConcurrency::Asynchronous);
+
+
+		//FString BranchName;
+		//SourceControlModule.GetProvider().Execute(TEXT("CURRENT_BRANCH"), BranchName, EConcurrency::Asynchronous);
+
+
+		int result = system(fullCommand.c_str());
+		if (result != 0)
+		{
+			std::cerr << "git pull	failed with exit code " << result << std::endl;
+				UE_LOG(LogTemp, Error, TEXT("Failed to pull changes from repository...try manually "));
+			return FReply::Handled();
+		}
+	}
+
+//	TArray<FString> AllFiles = SourceControlHelpers::PackageFilenames(InPackageNames);
+	
+	//CheckInOperation->SetDescription(L"Commit");
+	
+	
 	// TODO: At the moment there is no implementation to find local files modified . Sync might fail if some files are 
 	//       checked out . They need to be manually commited/stashed/discarded before sync can work 
 	//FString FullPath = FPaths::ProjectDir();
@@ -783,35 +978,37 @@ FReply FRealBandBackUpUIManagerImpl::Sync()
 	//bool bSuccess = (ResultOp == ECommandResult::Succeeded);
 	//
 
-	TSharedRef<FSync, ESPMode::ThreadSafe> SyncOperation = ISourceControlOperation::Create<FSync>();
-	ECommandResult::Type Result = GitSourceControl.GetProvider().Execute(SyncOperation,
-		                          TArray<FString>(), EConcurrency::Synchronous);
 	
-	if (Result == ECommandResult::Succeeded)
-	{
-		const FText NotificationText = FText::Format(
-			LOCTEXT("SourceControlMenu_Success", "Operation Sucess: {1} operation "),
-			FText::FromName(FName("Sync"))
-		);
-		FNotificationInfo Info(NotificationText);
-		Info.ExpireDuration = 8.0f;
-		FSlateNotificationManager::Get().AddNotification(Info);
-		UE_LOG(LogTemp, Display, TEXT("%s"), *NotificationText.ToString());
-	}
-	else
-	{
-		// Report failure with a notification 
-		const FText NotificationText = FText::Format(
-			LOCTEXT("SourceControlMenu_Failure", "Error: {0} operation failed!"),
-			FText::FromName(FName("Sync"))
-		);
-		
-		FNotificationInfo Info(NotificationText);
-		Info.ExpireDuration = 8.0f;
-		FSlateNotificationManager::Get().AddNotification(Info);
-		UE_LOG(LogTemp, Error, TEXT("%s"), *NotificationText.ToString());
-		
-	}
+	//TSharedRef<FUpdateStatus, ESPMode::ThreadSafe> SyncOperation = ISourceControlOperation::Create<FUpdateStatus>();
+	//
+	//ECommandResult::Type Result = GitSourceControl.GetProvider().Execute(SyncOperation,
+	//	                          TArray<FString>(), EConcurrency::Synchronous);
+	//
+	//if (Result == ECommandResult::Succeeded)
+	//{
+	//	const FText NotificationText = FText::Format(
+	//		LOCTEXT("SourceControlMenu_Success", "Operation Sucess: {1} operation "),
+	//		FText::FromName(FName("Sync"))
+	//	);
+	//	FNotificationInfo Info(NotificationText);
+	//	Info.ExpireDuration = 8.0f;
+	//	FSlateNotificationManager::Get().AddNotification(Info);
+	//	UE_LOG(LogTemp, Display, TEXT("%s"), *NotificationText.ToString());
+	//}
+	//else
+	//{
+	//	// Report failure with a notification 
+	//	const FText NotificationText = FText::Format(
+	//		LOCTEXT("SourceControlMenu_Failure", "Error: {0} operation failed!"),
+	//		FText::FromName(FName("Sync"))
+	//	);
+	//	
+	//	FNotificationInfo Info(NotificationText);
+	//	Info.ExpireDuration = 8.0f;
+	//	FSlateNotificationManager::Get().AddNotification(Info);
+	//	UE_LOG(LogTemp, Error, TEXT("%s"), *NotificationText.ToString());
+	//	
+	//}
 
 	return FReply::Handled();
 }
@@ -821,53 +1018,195 @@ FReply FRealBandBackUpUIManagerImpl::Save()
 {
 	FGitSourceControlModule& GitSourceControl = FModuleManager::LoadModuleChecked<FGitSourceControlModule>("GitSourceControl");
 	TArray<FString> Files;
-	//const FString& Directory;// = InFiles[0];
-	//FString gitBinaryPath = GitSourceControlUtils::FindGitBinaryPath();
-	//GitSourceControl.GetProvider().Execute()
-	//GitSourceControlUtils::RunCommit(gitBinaryPath,)
-
-
-	//const bool bResult = GitSourceControlUtils::ListFilesInDirectoryRecurse(InPathToGitBinary, InRepositoryRoot, Directory, Files);
-
-
-
-	TSharedRef<FUpdateStatus, ESPMode::ThreadSafe> SaveOperation = ISourceControlOperation::Create<FUpdateStatus>();
-	SaveOperation->SetUpdateModifiedState(true);
-	ECommandResult::Type Result = GitSourceControl.GetProvider().Execute(SaveOperation,
-		TArray<FString>(), EConcurrency::Synchronous);
-
-	if (Result == ECommandResult::Succeeded)
+	bool bPromptUserToSave = true; // Ask user if they want to save the unsaved data
+	bool bSaveMapPackages = true;
+	bool bSaveContentPackages = true;
+	if (FEditorFileUtils::SaveDirtyPackages(bPromptUserToSave, bSaveMapPackages, bSaveContentPackages) == false)
 	{
+		// The user pressed cancel. Abort the import so the user doesn't lose any changes
+		UE_LOG(LogTemp, Display, TEXT("The user pressed cancel"));
+		//return FReply::Handled();
+	}
+
+	FSourceControlModule& SourceControlModule = FSourceControlModule::Get();
+	if (SourceControlModule.IsEnabled())
+	{
+
+		//TArray<FString> Filenames = FSourceControlWindows::GetSourceControlLocations(/*bContentOnly*/true);
+		//TArray<UPackage*> PackagesToSave;
+		//TMap<FString, FSourceControlStatePtr> PackageStates;
+		//FEditorFileUtils::FindAllSubmittablePackageFiles(PackageStates, true);
+		//FEditorFileUtils::FindAllPackageFiles(Filenames);
+		//FEditorFileUtils::FindAllSubmittableProjectFiles(PackageStates);
+		//   
+		//FSourceControlWindows::ChoosePackagesToCheckIn();
+
+		//TArray<FString> FilesToSubmit;
+		//for (TMap<FString, FSourceControlStatePtr>::TConstIterator It(PackageStates); It; ++It)
+		//{
+		//	FilesToSubmit.Add(FPaths::ConvertRelativePathToFull(It.Key()));
+		//}
+
+
+		//	FCheckinResultInfo ResultInfo;
+		//	FSourceControlWindows::PromptForCheckin(ResultInfo, FilesToSubmit);
+			
+			//FString gitBinary = GitSourceControlUtils::FindGitBinaryPath();
+		//	if (ResultInfo.Result == ECommandResult::Succeeded)
+				
+		FString gitBinaryPath;
+		GetGitBinaryPath(gitBinaryPath);
+		std::string myString = TCHAR_TO_UTF8(*gitBinaryPath);
+		myString = "\"" + myString + "\\cmd\\git\"";
+		
+		FString FullPath = FPaths::ProjectDir();
+		if (_chdir(TCHAR_TO_UTF8(*FullPath)) == -1) {
+		    UE_LOG(LogTemp, Error, TEXT("Failed to change directory to: %s"), TCHAR_TO_UTF8(*FullPath));
+			return FReply::Handled();
+		}
+		// Get the branch 
+		FString BranchName;
+		FString gArguments = " rev-parse --abbrev-ref HEAD";
+		FString Command = FString(myString.c_str()); //+ " " + gArguments;
+		FString Result;
+		int32 ReturnCode = -1;
+		FString stdOut;
+		FString Error;
+		//FPlatformProcess::ExecProcess(TEXT("/bin/sh"), *Command, &Result);
+		FPlatformProcess::ExecProcess(*Command, *gArguments, &ReturnCode, &stdOut, &Error);
+		BranchName = stdOut.TrimEnd().TrimStart();
+
+		// commit the changes
+		
+		//std::string commitCmd = "commit . -m \"Assets Updated\"";
+		std::string commitCmd = "commit ";
+		commitCmd.append(".");
+		commitCmd.append(" -m ");
+		commitCmd.append("\"");
+		commitCmd.append("Assets Updated");
+		commitCmd.append("\"");
+		
+		std::string FullCommitCommand = myString + " " + commitCmd;
+		int result = system(FullCommitCommand.c_str());
+		if (result != 0)
+		{
+			std::cerr << "git push failed with exit code " << result << std::endl;
+			UE_LOG(LogTemp, Error, TEXT("Failed to push changes to repository...try manually "));
+			return FReply::Handled();
+			
+		}
+		// push the changes
+		std::string params = "push origin ";
+		params.append(TCHAR_TO_UTF8(*BranchName));
+		std::string fullCommand = myString + " " + params;
+	    result = system(fullCommand.c_str());
+		if (result != 0)
+		{
+		    std::cerr << "git push failed with exit code " << result << std::endl;
+			UE_LOG(LogTemp, Error, TEXT("Failed to push changes to repository...try manually "));
+			return FReply::Handled();
+		}
+
 		const FText NotificationText = FText::Format(
-			LOCTEXT("SourceControlMenu_Success", "Operation Sucess: {1} operation "),
+			LOCTEXT("SourceControlMenu_Success", "Remote Repository Updated"),
 			FText::FromName(FName("Save"))
 		);
 		FNotificationInfo Info(NotificationText);
 		Info.ExpireDuration = 8.0f;
 		FSlateNotificationManager::Get().AddNotification(Info);
-		UE_LOG(LogTemp, Display, TEXT("%s"), *NotificationText.ToString());
+
+		/*	TSharedRef<FCheckIn, ESPMode::ThreadSafe> CheckInOperation = ISourceControlOperation::Create<FCheckIn>();
+			bool bCheckinSuccess = SourceControlModule.GetProvider().Execute(CheckInOperation, FilesToSubmit) == ECommandResult::Succeeded;
+			if (bCheckinSuccess)
+			{
+				UE_LOG(LogTemp, Error, TEXT("Checkin sucess "));
+			}
+			else
+			{
+				UE_LOG(LogTemp, Error, TEXT("Checkin...fail..try manually "));
+			}*/
+
+		
 	}
 	else
 	{
-		// Report failure with a notification 
-		const FText NotificationText = FText::Format(
-			LOCTEXT("SourceControlMenu_Failure", "Save Error: {0} operation failed!"),
-			FText::FromName(FName("Save"))
-		);
-
-		FNotificationInfo Info(NotificationText);
-		Info.ExpireDuration = 8.0f;
-		FSlateNotificationManager::Get().AddNotification(Info);
-		UE_LOG(LogTemp, Error, TEXT("%s"), *NotificationText.ToString());
-
+		UE_LOG(LogTemp, Error, TEXT("Source Control is disabled"));
+		return FReply::Handled();
 	}
+
+	//ToDo : Need to explore these interfaces for source control operations
+	
+
+	//TSharedRef<FUpdateStatus, ESPMode::ThreadSafe> SaveOperation = ISourceControlOperation::Create<FUpdateStatus>();
+	//SaveOperation->SetUpdateModifiedState(true);
+	//ECommandResult::Type Result = GitSourceControl.GetProvider().Execute(SaveOperation,
+	//	TArray<FString>(), EConcurrency::Synchronous);
+
+	//if (Result == ECommandResult::Succeeded)
+	//{
+	//	const FText NotificationText = FText::Format(
+	//		LOCTEXT("SourceControlMenu_Success", "Operation Sucess: {1} operation "),
+	//		FText::FromName(FName("Save"))
+	//	);
+	//	FNotificationInfo Info(NotificationText);
+	//	Info.ExpireDuration = 8.0f;
+	//	FSlateNotificationManager::Get().AddNotification(Info);
+	//	UE_LOG(LogTemp, Display, TEXT("%s"), *NotificationText.ToString());
+	//}
+	//else
+	//{
+	//	// Report failure with a notification 
+	//	const FText NotificationText = FText::Format(
+	//		LOCTEXT("SourceControlMenu_Failure", "Save Error: {0} operation failed!"),
+	//		FText::FromName(FName("Save"))
+	//	);
+
+	//	FNotificationInfo Info(NotificationText);
+	//	Info.ExpireDuration = 8.0f;
+	//	FSlateNotificationManager::Get().AddNotification(Info);
+	//	UE_LOG(LogTemp, Error, TEXT("%s"), *NotificationText.ToString());
+
+	//}
+
+	const TSharedPtr<IConcertClientWorkspace> WorkspacePtr = pConcertSyncClient->GetWorkspace();
+	if (WorkspacePtr)
+	{
+		const int64 LastActivityId = WorkspacePtr->GetLastActivityId();
+		const int64 FirstActivityIdToFetch = FMath::Max<int64>(1, LastActivityId - RealBandMultiUser::MaximumNumberOfActivities);
+
+		TMap<FGuid, FConcertClientInfo>   EndpointClientInfoMap;
+		TArray<FConcertSessionActivity> FetchedActivities;
+		WorkspacePtr->GetActivities(FirstActivityIdToFetch, 100, EndpointClientInfoMap, FetchedActivities);
+		FString userName = FPlatformProcess::UserName();
+		FString SessionId = FString::Printf(TEXT("%s"), *pConcertSyncClient->GetWorkspace()->GetSession().GetId().ToString());
+		FString SummarySessionFile = FPaths::ConvertRelativePathToFull(FPaths::ProjectDir()) + FApp::GetProjectName() + FString("_") + SessionId;
+		TArray<FString> SummaryStrings;
+		for (FConcertSessionActivity& activity : FetchedActivities)
+		{
+			FString eventDateTime = activity.Activity.EventTime.ToString(TEXT("%d.%m.%Y %H:%M:%S :"));
+			//activity.ActivitySummary->ToDisplayText()
+			FText Summary = activity.ActivitySummary->ToDisplayText(FText::FromString(userName));
+
+			SummaryStrings.Add(eventDateTime + Summary.ToString());
+		}
+
+		if (!FFileHelper::SaveStringArrayToFile(SummaryStrings, *SummarySessionFile))
+		{
+			UE_LOG(LogTemp, Error, TEXT("Failed to save session Activities"));
+		}
+	}
+	else
+	{
+		UE_LOG(LogTemp, Error, TEXT("Workspace not found"));
+	}
+
 
 	return FReply::Handled();
 }
 
 FReply FRealBandBackUpUIManagerImpl::JoinSession()
 {
-	if (pConcertSyncClient)
+	if (pConcertSyncClient && ServerId.IsValid())
 	{
 		pConcertSyncClient->GetConcertClient()->GetServerSessions(ServerId).
 			Next([iConcertSyncClient = pConcertSyncClient, iServerId = ServerId](FConcertAdmin_GetAllSessionsResponse Response)
@@ -886,24 +1225,49 @@ FReply FRealBandBackUpUIManagerImpl::JoinSession()
 							}
 						}
 					}
+
+					if (Response.ResponseCode == EConcertResponseCode::Failed)
+					{
+						UE_LOG(LogTemp, Error, TEXT("=======  Failed to Join SESSION =============="));
+						FMessageDialog::Open(EAppMsgType::Ok, FText::FromString(L"Failed to Join SESSION"));
+					}
+
+					if (Response.ResponseCode == EConcertResponseCode::Pending)
+					{
+						UE_LOG(LogTemp, Error, TEXT("=======  Pending to Join SESSION =============="));
+						FMessageDialog::Open(EAppMsgType::Ok, FText::FromString(L"Failed to Join SESSION:Pending"));
+					}
 				});
+
+	}
+	else
+	{
+		UE_LOG(LogTemp, Error, TEXT("=======  Failed to Join SESSION....No Server Sessions =============="));
+		FMessageDialog::Open(EAppMsgType::Ok, FText::FromString(L"Failed to Join Session ...Try Restarting the Server "));
+
 	}
 	return FReply::Handled();
 }
 
 
-void FRealBandBackUpUIManagerImpl::TestJoinSession(const FGuid& iServer, const FGuid& iClient)
-{
-
-}
-
-
-
 bool FRealBandBackUpUIManagerImpl::InitSourceVersionControl()
 {
+
+	FSourceControlModule& SourceControlModule = FSourceControlModule::Get();
+	if (!SourceControlModule.IsEnabled())
+	{
+		FGitSourceControlModule& GitSourceControl = FModuleManager::LoadModuleChecked<FGitSourceControlModule>("GitSourceControl");
+		GitSourceControl.GetProvider().Init();
+		SourceControlModule.ShowLoginDialog(FSourceControlLoginClosed(), ELoginWindowMode::Modal, EOnLoginWindowStartup::PreserveProvider);
+		FString texStatus = SourceControlModule.GetProvider().GetStatusText().ToString();
+
+	}
+
+
 	// check Git availability
 	FGitSourceControlModule& GitSourceControl = FModuleManager::LoadModuleChecked<FGitSourceControlModule>("GitSourceControl");
 	GitSourceControl.GetProvider().Init();
+	
 	if (!GitSourceControl.GetProvider().IsGitAvailable())
 	{
 		FMessageDialog::Open(EAppMsgType::Ok, FText::FromString(L"Failed to find Git Bash installation"));
@@ -959,6 +1323,8 @@ bool FRealBandBackUpUIManagerImpl::InitSourceVersionControl()
 	{
 		projectPath.RemoveAt(projectPath.Len() - 1, 1);
 	}
+	
+
 	FString ScriptArguments = projectPath;
 	FString Command = FString::Printf(TEXT("\"%s\" \"%s\" \"%s\""), *PythonExecutable, *ScriptPath, *ScriptArguments);
 	UE_LOG(LogTemp, Display, TEXT("Python Command  %s"), *Command);
@@ -1069,6 +1435,38 @@ void FRealBandBackUpUIManagerImpl::GetPythonPath(FString& oPythonPath)
 	{
 		UE_LOG(LogTemp, Error, TEXT("Failed to find Python executable path"));
 	}
+}
+
+bool FRealBandBackUpUIManagerImpl::GetGitBinaryPath(FString& oGitBinaryPath)
+{
+	bool bRet = false;
+	HKEY key;
+	LONG result = RegOpenKeyEx(HKEY_LOCAL_MACHINE, TEXT("SOFTWARE\\GitForWindows"), 0, KEY_READ, &key);
+
+	if (result == ERROR_SUCCESS) {
+		char path[MAX_PATH] = { 0 };
+		DWORD pathSize = sizeof(path);
+
+		TCHAR Path[MAX_PATH];
+		DWORD PathLength = ARRAYSIZE(Path);
+		if (RegQueryValueEx(key, TEXT("InstallPath"), NULL, NULL, (LPBYTE)Path, &PathLength) == ERROR_SUCCESS)
+		{
+			oGitBinaryPath = FString(Path);
+			UE_LOG(LogTemp, Display, TEXT("Git install path: %s"), *oGitBinaryPath);
+			bRet = true;
+		}
+		else
+		{
+			bRet = false;
+		}
+
+		RegCloseKey(key);
+	}
+	else
+	{
+		bRet = false;
+	}
+	return bRet;
 }
 
 #undef LOCTEXT_NAMESPACE

@@ -9,6 +9,7 @@ public class RealBandMultiUserTarget : TargetRules
 	{
 		Type = TargetType.Game;
 		DefaultBuildSettings = BuildSettingsVersion.V2;
-		ExtraModuleNames.AddRange( new string[] { "RealBandMultiUser" } );
-	}
+		ExtraModuleNames.AddRange( new string[] { "RealBandMultiUser","GitSourceControl" } );
+       
+    }
 }
