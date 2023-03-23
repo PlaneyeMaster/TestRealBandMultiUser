@@ -8,8 +8,9 @@ public class BackUp : ModuleRules
 	public BackUp(ReadOnlyTargetRules Target) : base(Target)
 	{
 		PCHUsage = ModuleRules.PCHUsageMode.UseExplicitOrSharedPCHs;
-		
-		PublicIncludePaths.AddRange(
+        //bUsePrecompiled = true;
+
+        PublicIncludePaths.AddRange(
 			new string[] {
 				// ... add public include paths required here ...
 				Path.Combine(EngineDirectory, @"Plugins/Developer/Concert/ConcertApp/MultiUserClient/Source/MultiUserClient/Public"),
@@ -36,14 +37,15 @@ public class BackUp : ModuleRules
         PrivateIncludePathModuleNames.AddRange(
                 new string[]
                 {
-                    "UdpMessaging",
+                    "UdpMessaging",    
+                    "GitSourceControl"
                 }
             );
 
         PublicIncludePathModuleNames.AddRange(
                 new string[]
                 {
-                    "UdpMessaging",
+                    "UdpMessaging"
                 }
             );
 
@@ -106,6 +108,9 @@ public class BackUp : ModuleRules
 				"Messaging",
                 "UdpMessaging",
                 "GitSourceControl",
+                "SourceControl",
+                "SourceControlWindows",
+                "DesktopWidgets",
                 "TakeMovieScene"
                // "WindowsTargetPlatform", // For ECompilerVersion
                // "DesktopPlatform"

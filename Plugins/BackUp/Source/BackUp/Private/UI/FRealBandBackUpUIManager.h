@@ -17,6 +17,12 @@ class URealBandConfig;
 class SConcertSessionBrowser;
 class IConcertClientSession;
 class IConcertSessionBrowserController;
+class FStructOnScope;
+struct FConcertClientInfo;
+struct FConcertSyncActivity;
+
+
+
 //struct EConcertConnectionStatus;
 
 DECLARE_LOG_CATEGORY_EXTERN(LogManager, Log, All);
@@ -41,6 +47,7 @@ private:
 	TSharedPtr < SConcertSessionBrowser> ConcertSessionBrowser;
 	FSourceControlProjectDirDelegate ProjectDirHandle;
 	void GetPythonPath(FString& oPythonPath);
+	bool GetGitBinaryPath(FString& oGitBinaryPath);
 	FString remoteUrl;
 	bool isHostMachine;
 public:
@@ -56,11 +63,14 @@ public:
 	void OnSessionConnectionChanged(IConcertClientSession& Session, EConcertConnectionStatus Status);
 	/** Invoked when the session connection state is changed. */
 	void HandleSessionConnectionChanged(IConcertClientSession& InSession, EConcertConnectionStatus ConnectionStatus);
+	void HandleActivityAddedOrUpdated(const FConcertClientInfo& InClientInfo, const FConcertSyncActivity& InActivity,
+		                              const FStructOnScope& InActivitySummary);
 	FReply JoinSession();
-	void TestJoinSession(const FGuid& iServer, const FGuid& iClient);
+	
 	//void OnSessionConnectionChanged(IConcertClientSession& InSession, EConcertConnectionStatus ConnectionStatus);
 	FReply Save();
 	FReply Sync();
+	
 };
 
 

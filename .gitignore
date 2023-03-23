@@ -1,7 +1,10 @@
 .vs/
 Binaries/
+Content/
 Config/
 DerivedDataCache/
 Intermediate/
 Platforms/
 Saved/
+Source/
+Plugins/
