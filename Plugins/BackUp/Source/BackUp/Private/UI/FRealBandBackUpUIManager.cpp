@@ -1096,7 +1096,7 @@ FReply FRealBandBackUpUIManagerImpl::Save()
 		if (ReturnCode != 0)
 		{
 			std::cerr << "git commit failed with exit code " << ReturnCode << std::endl;
-			UE_LOG(LogTemp, Error, TEXT("Failed to push changes to repository...try manually "));
+			UE_LOG(LogTemp, Error, TEXT("Failed to save changes to repository...try manually git commit "));
 			//return FReply::Handled();
 			
 		}
