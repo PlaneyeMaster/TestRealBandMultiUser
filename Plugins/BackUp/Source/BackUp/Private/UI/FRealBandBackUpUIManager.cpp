@@ -1086,20 +1086,25 @@ FReply FRealBandBackUpUIManagerImpl::Save()
 		commitCmd.append("Assets Updated");
 		commitCmd.append("\"");
 		
-		std::string FullCommitCommand = myString + " " + commitCmd;
-		int result = system(FullCommitCommand.c_str());
-		if (result != 0)
+		Command = FString(myString.c_str());
+		gArguments = " commit . -m ";
+		gArguments.Append("\"");
+		gArguments.Append("Assets Update");
+		gArguments.Append("\"");
+		FPlatformProcess::ExecProcess(*Command, *gArguments, &ReturnCode, &stdOut, &Error);
+		//int result = system(FullCommitCommand.c_str());
+		if (ReturnCode != 0)
 		{
-			std::cerr << "git push failed with exit code " << result << std::endl;
+			std::cerr << "git commit failed with exit code " << ReturnCode << std::endl;
 			UE_LOG(LogTemp, Error, TEXT("Failed to push changes to repository...try manually "));
-			return FReply::Handled();
+			//return FReply::Handled();
 			
 		}
 		// push the changes
 		std::string params = "push origin ";
 		params.append(TCHAR_TO_UTF8(*BranchName));
 		std::string fullCommand = myString + " " + params;
-	    result = system(fullCommand.c_str());
+	    int result = system(fullCommand.c_str());
 		if (result != 0)
 		{
 		    std::cerr << "git push failed with exit code " << result << std::endl;
@@ -1167,39 +1172,6 @@ FReply FRealBandBackUpUIManagerImpl::Save()
 	//	UE_LOG(LogTemp, Error, TEXT("%s"), *NotificationText.ToString());
 
 	//}
-
-	const TSharedPtr<IConcertClientWorkspace> WorkspacePtr = pConcertSyncClient->GetWorkspace();
-	if (WorkspacePtr)
-	{
-		const int64 LastActivityId = WorkspacePtr->GetLastActivityId();
-		const int64 FirstActivityIdToFetch = FMath::Max<int64>(1, LastActivityId - RealBandMultiUser::MaximumNumberOfActivities);
-
-		TMap<FGuid, FConcertClientInfo>   EndpointClientInfoMap;
-		TArray<FConcertSessionActivity> FetchedActivities;
-		WorkspacePtr->GetActivities(FirstActivityIdToFetch, 100, EndpointClientInfoMap, FetchedActivities);
-		FString userName = FPlatformProcess::UserName();
-		FString SessionId = FString::Printf(TEXT("%s"), *pConcertSyncClient->GetWorkspace()->GetSession().GetId().ToString());
-		FString SummarySessionFile = FPaths::ConvertRelativePathToFull(FPaths::ProjectDir()) + FApp::GetProjectName() + FString("_") + SessionId;
-		TArray<FString> SummaryStrings;
-		for (FConcertSessionActivity& activity : FetchedActivities)
-		{
-			FString eventDateTime = activity.Activity.EventTime.ToString(TEXT("%d.%m.%Y %H:%M:%S :"));
-			//activity.ActivitySummary->ToDisplayText()
-			FText Summary = activity.ActivitySummary->ToDisplayText(FText::FromString(userName));
-
-			SummaryStrings.Add(eventDateTime + Summary.ToString());
-		}
-
-		if (!FFileHelper::SaveStringArrayToFile(SummaryStrings, *SummarySessionFile))
-		{
-			UE_LOG(LogTemp, Error, TEXT("Failed to save session Activities"));
-		}
-	}
-	else
-	{
-		UE_LOG(LogTemp, Error, TEXT("Workspace not found"));
-	}
-
 
 	return FReply::Handled();
 }
