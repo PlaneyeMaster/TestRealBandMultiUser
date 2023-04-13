@@ -19,8 +19,6 @@
 
 //#include "MultiUserServerModule.h"
 #include "IMultiUserServerModule.h"
-#include "Blutility/Classes/EditorUtilityWidget.h"
-#include "Blutility/Classes/EditorUtilityObject.h"
 
 #include "../../../../Engine/Plugins/Developer/Concert/ConcertMain/Source/Concert/Public/ConcertSettings.h"
 #include "../../../../Engine/Plugins/Developer/Concert/ConcertMain/Source/Concert/Public/IConcertClient.h"
@@ -41,13 +39,10 @@
 #include "../../../../Engine/Plugins\Developer\Concert\ConcertUI\ConcertSharedSlate\Source\ConcertSharedSlate\Public\Session\Browser\IConcertSessionBrowserController.h"
 #include "SessionServices/Public/ISessionServicesModule.h"
 
-//#include "../../../../Engine/Plugins\VirtualProduction\MultiUserTakes\Source\ConcertTakeRecorder\Private\ConcertTakeRecorderMessages.h"
-
 //Git
 #include "../../../../Engine/Plugins\Developer\GitSourceControl\Source\GitSourceControl\Private\GitSourceControlModule.h"
 #include "../../../../Engine/Plugins\Developer\GitSourceControl\Source\GitSourceControl\Private\GitSourceControlUtils.h"
 #include "../../../../Engine\Plugins\Developer\GitSourceControl\Source\GitSourceControl\Private\GitSourceControlSettings.h"
-
 
 #include "SourceControlHelpers.h"
 #include "SourceControl\Public\SourceControlOperations.h"
@@ -55,22 +50,13 @@
 #include "SourceControlWindows\Public\ISourceControlWindowsModule.h"
 #include "FileHelpers.h"
 #include "Misc/FileHelper.h"
-
-//C:\Program Files\Epic Games\UE_5.1\Engine\Source\Editor\SourceControlWindows\Public\SourceControlWindows.h
 #include "SourceControlWindows\Public\SourceControlWindows.h"
-
 #include "Widgets/Notifications/SNotificationList.h"
 #include "Framework/Notifications/NotificationManager.h"
-//#include <windows.h>
 #include <Lmcons.h>
-
 // For Python 
 #include "GenericPlatform/GenericPlatformProcess.h"
-
-
-
 DEFINE_LOG_CATEGORY(LogManager);
-
 TSharedPtr<FRealBandBackUpUIManagerImpl> FRealBandBackUpUIManager::Instance;
 #define LEVELEDITOR_MODULE_NAME TEXT("LevelEditor")
 
@@ -79,13 +65,6 @@ TSharedPtr<FRealBandBackUpUIManagerImpl> FRealBandBackUpUIManager::Instance;
 #include <winreg.h>
 #include "Windows/HideWindowsPlatformTypes.h"
 
-//static const FString WindowsRunRegKeyPath = "Software\\Microsoft\\Windows\\CurrentVersion\\Run";
-//static const FString ListenerAutolaunchRegValueName = "SwitchboardListener";
-
-//FString GetListenerAutolaunchEntry();
-//FString GetListenerAutolaunchEntryExecutable();
-//bool SetListenerAutolaunchEntry(const FString& NewCommandLine);
-//bool RemoveListenerAutolaunchEntry();
 #endif
 
 #include <direct.h>
@@ -124,8 +103,6 @@ FRealBandBackUpUIManagerImpl::~FRealBandBackUpUIManagerImpl()
 	const FString& IniFile = SourceControlHelpers::GetSettingsIni();
 	FString SettingsSection = TEXT("GitSourceControl.GitSourceControlSettings");
 	
-
-	
 }
 void FRealBandBackUpUIManagerImpl::Initialize()
 {
@@ -136,44 +113,45 @@ void FRealBandBackUpUIManagerImpl::Initialize()
 
 }
 //
-//
-//
 void FRealBandBackUpUIManager::Initialize()
 {
-//	
 	if (!Instance.IsValid())
-    {
-//	//	//FRealBandStyle::Initialize();
-	    Instance = MakeShareable(new FRealBandBackUpUIManagerImpl());
-//	//	FRealBandStyle::SetSVGIcon("SaveIcon", "saveIcon");
-//	//	//FRealBandStyle::SetIcon("Icon8", "IconsB");
-//	//	FRealBandStyle::SetIcon("Icon8", "Icon40x40");
-	}
-
-
-	//IMultiUserClientModule& MultiUserClientModule = IMultiUserClientModule::Get();
-//	if (!MultiUserClientModule.GetClient()->GetConcertClient()->IsStarted())
 	{
-		FString ProjectFileName = FApp::GetProjectName() + FString(".uproject");
-		
-		FString ProjectFilePath = FPaths::ProjectDir() / ProjectFileName;
-		ProjectFilePath = FPaths::ConvertRelativePathToFull(ProjectFilePath);
+		//	//	//FRealBandStyle::Initialize();
+		Instance = MakeShareable(new FRealBandBackUpUIManagerImpl());
+		//	//	FRealBandStyle::SetSVGIcon("SaveIcon", "saveIcon");
+		//	//	//FRealBandStyle::SetIcon("Icon8", "IconsB");
+		//	//	FRealBandStyle::SetIcon("Icon8", "Icon40x40");
 
-		std::wstring currwdir;
-		TCHAR buffer[MAX_PATH] = { 0 };
-		GetModuleFileName(NULL, buffer, MAX_PATH);
-		std::wstring::size_type pos = std::wstring(buffer).find_last_of(L"\\/");
-		currwdir = std::wstring(buffer).substr(0, pos);
 
-		bool isSuccess = Instance->InitSourceVersionControl();
-		if (!isSuccess)
+
+			//IMultiUserClientModule& MultiUserClientModule = IMultiUserClientModule::Get();
+		//	if (!MultiUserClientModule.GetClient()->GetConcertClient()->IsStarted())
 		{
-			FMessageDialog::Open(EAppMsgType::Ok, FText::FromString(L"Failed to Initialize source control. Check the Debug Output"));
-			return;
+			FString ProjectFileName = FApp::GetProjectName() + FString(".uproject");
+
+			FString ProjectFilePath = FPaths::ProjectDir() / ProjectFileName;
+			ProjectFilePath = FPaths::ConvertRelativePathToFull(ProjectFilePath);
+
+			std::wstring currwdir;
+			TCHAR buffer[MAX_PATH] = { 0 };
+			GetModuleFileName(NULL, buffer, MAX_PATH);
+			std::wstring::size_type pos = std::wstring(buffer).find_last_of(L"\\/");
+			currwdir = std::wstring(buffer).substr(0, pos);
+
+			bool isSuccess = Instance->InitSourceVersionControl();
+			if (!isSuccess)
+			{
+				FMessageDialog::Open(EAppMsgType::Ok, FText::FromString(L"Failed to Initialize source control. Check the Debug Output"));
+				return;
+			}
+			Instance->InitMultiUserEditorControls();
+			Instance->Initialize();
 		}
-		//Instance->Save();
-		Instance->InitMultiUserEditorControls();
-		Instance->Initialize();
+	}
+	else
+	{
+		Instance->CreateWidgetWindow();
 	}
 	
 }
@@ -393,6 +371,11 @@ void FRealBandBackUpUIManagerImpl::CreateWidgetWindow()
 
 
 		FSlateApplication::Get().AddWindow(pDialogMainWindow.ToSharedRef());
+
+		pDialogMainWindow->SetOnWindowClosed(FOnWindowClosed::CreateLambda([this](const TSharedRef<SWindow>& Window)
+		{
+				pDialogMainWindow.Reset();
+		}));
 		
 		TSharedRef<FSlateAccessibleMessageHandler> MessageHandler = FSlateApplication::Get().GetAccessibleMessageHandler();
 		
@@ -422,7 +405,7 @@ void FRealBandBackUpUIManagerImpl::CreateWidgetWindow()
 	else
 	{
 	    UE_LOG(LogTemp, Display, TEXT("%hs: ==Main Dialog Window =="), __FUNCTION__);
-	    pDialogMainWindow->BringToFront();
+	    //pDialogMainWindow->BringToFront();
 		pDialogMainWindow->SetVisibility(EVisibility::Visible);
 ////		if (!pDialogMainWindow->IsVisible())
 ////		{
@@ -431,26 +414,6 @@ void FRealBandBackUpUIManagerImpl::CreateWidgetWindow()
 ////			pRealBandImportSettings->SetVisibility(EVisibility::Visible);
 ////		}
     }
-//////	pDialogMainWindow->SetOnWindowClosed(FRequestDestroyWindowOverride::CreateSP(this, &FRealBandUIManagerImpl::OnDialogClosed));
-////
-////
-////
-////    if (pRealBandImportSettings && GetAssetViewCount() == 0)
-////    {
-////	    pRealBandImportSettings->SetVisibility(EVisibility::Visible);
-////		pApplyButton->SetVisibility(EVisibility::Visible);
-////		pImport->SetVisibility(EVisibility::Hidden);
-////	}
-////
-////	pDialogMainWindow->SetOnWindowClosed(FOnWindowClosed::CreateLambda([this](const TSharedRef<SWindow>& Window)
-////		{
-////			pRealBandImportSettings->SaveSettings();
-////			//pDialogMainWindow->SetVisibility(EVisibility::Collapsed);
-////			pDialogMainWindow.Reset();
-////		//	pFRealBandAssetImporter.Reset();
-////			//FRealBandUIManager::Instance.Reset();
-////		}));
-//
 }
 
 
@@ -942,7 +905,6 @@ FReply FRealBandBackUpUIManagerImpl::Sync()
 		//FString BranchName;
 		//SourceControlModule.GetProvider().Execute(TEXT("CURRENT_BRANCH"), BranchName, EConcurrency::Asynchronous);
 
-
 		int result = system(fullCommand.c_str());
 		if (result != 0)
 		{
@@ -1077,19 +1039,12 @@ FReply FRealBandBackUpUIManagerImpl::Save()
 		BranchName = stdOut.TrimEnd().TrimStart();
 
 		// commit the changes
-		
-		//std::string commitCmd = "commit . -m \"Assets Updated\"";
-		std::string commitCmd = "commit ";
-		commitCmd.append(".");
-		commitCmd.append(" -m ");
-		commitCmd.append("\"");
-		commitCmd.append("Assets Updated");
-		commitCmd.append("\"");
-		
+		const FDateTime NowDate = FDateTime::Now();
 		Command = FString(myString.c_str());
 		gArguments = " commit . -m ";
 		gArguments.Append("\"");
-		gArguments.Append("Assets Update");
+		gArguments.Append("Assets Update:");
+		gArguments.Append(NowDate.ToString());
 		gArguments.Append("\"");
 		FPlatformProcess::ExecProcess(*Command, *gArguments, &ReturnCode, &stdOut, &Error);
 		//int result = system(FullCommitCommand.c_str());
@@ -1295,7 +1250,24 @@ bool FRealBandBackUpUIManagerImpl::InitSourceVersionControl()
 	{
 		projectPath.RemoveAt(projectPath.Len() - 1, 1);
 	}
-	
+
+	if (_chdir(TCHAR_TO_UTF8(*projectPath)) == -1) {
+		UE_LOG(LogTemp, Error, TEXT("Failed to change directory to: %s"), TCHAR_TO_UTF8(*projectPath));
+		return false;
+	}
+
+	std::string dirAccess = "git config --global --add safe.directory ";
+	dirAccess += "\"";
+	dirAccess.append(TCHAR_TO_UTF8(*projectPath));
+	dirAccess.append("\"");
+	int result = system(dirAccess.c_str());
+	if (result != 0)
+	{
+		std::cerr << "git config --global --add safe.directory	failed with exit code " << result << std::endl;
+		UE_LOG(LogTemp, Error, TEXT("Failed to pull changes from repository...try manually "));
+		return false;
+	}
+
 
 	FString ScriptArguments = projectPath;
 	FString Command = FString::Printf(TEXT("\"%s\" \"%s\" \"%s\""), *PythonExecutable, *ScriptPath, *ScriptArguments);

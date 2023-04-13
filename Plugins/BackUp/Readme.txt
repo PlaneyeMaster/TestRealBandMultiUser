@@ -11,12 +11,20 @@ Tools Required:
 3) Configure git lfs
    open git bash
    git lfs install
-2) Makes sure Python is installed 
-3) Install git module for python using the following command 
-    3.1) Open git bash console
-    3.2) Type the command 
+2) Makes sure Python is installed
+  2.1) Place the Python path in the PATH variable
+  2.2) Edit the environment variables
+3) Make sure Pip is installed
+   3.1) OPen a command prompt
+   3.2) type "pip" and enter
+        If you get an error pip not found then you need to install pip
+   3.3) Type "curl https://bootstrap.pypa.io/get-pip.py -o get-pip.py"
+   3.4) Type "python get-pip.py"
+4) Install git module for python using the following command 
+    4.1) Open git bash console
+    4.2) Type the command 
           pip install GitPython
-4) All the users should have access permission to the github repositories
+5) All the users should have access permission to the github repositories
 
 
 Create Git Repository 
@@ -61,11 +69,25 @@ Saved/
     https://github.com/PlaneyeMaster/nDisplayDemo.git
 14) go to the git bash shell
 15) git remote add origin https://github.com/PlaneyeMaster/nDisplayDemo.git
-16) git push -u origin master
-17) If you get any error while pushing large file in excess of 100 MB 
+    15.1) Create a branch "master"
+          git branch master
+16  git add .
+17) git commit -m "First Commit"
+18) git push -u origin master
+    18.1) If you get an error like "remote: error: File Content/ArchvisProject/Levels/Interior_Lightmass_BuiltData.uasset is 406.02 MB; this exceeds GitHub's file size limit of 100.00 MB"
+          then try the following command to remove the following files
+          git filter-branch -f --tree-filter 'rm -f Content/StarterContent/HDRI/HDRI_Epic_Courtyard_Daylight.uasset' HEAD
+          git gc --prune=now --aggressive
+          git commit -m "Removing Large files"
+          git push -u origin master
+19) If you get any error while pushing large file in excess of 100 MB 
       git lfs track <filename>
       git commit
 
+20) Verify if the repository is updated correctly
+  20.1) Go to the browser and open the github url 
+  20.2) Navigate to your repository 
+     You should see your folders here 
 
 Cloning Git Repository
 ======================
