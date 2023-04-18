@@ -31,9 +31,11 @@ try:
         remotes = grepo.remotes
         print(remotes[0].url)
         #remoteurl =  git config --get remote.origin.url
-        subprocess.call(["git", "branch", "--set-upstream-to=origin/main", "main"])
+        subprocess.call(["git", "branch", "--set-upstream-to=origin/master", "master"])
         print("Start Sync ....")
         os.chdir(repo_name)
+        subprocess.call(["git", "config","--global","-add","safe.directory",repo_name])
+        print("##Add Safe directory##")
         print(os.getcwd())
         subprocess.call(["git", "pull","--all"])
         #subprocess.call(["git", "pull","%s main" remotes[0].url)
