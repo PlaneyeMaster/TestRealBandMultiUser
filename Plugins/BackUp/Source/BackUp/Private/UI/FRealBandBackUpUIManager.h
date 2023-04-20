@@ -38,6 +38,8 @@ private:
 	TSharedPtr<SOverlay> pOverlay;
 	TSharedPtr<SCanvas> pCanvas;
 	TSharedPtr<SButton> pJoinBtn;
+	TSharedPtr<SButton> pLaunchBtn;
+
 	void SetupMenuItem();
 	void FillToolbar(FToolBarBuilder& ToolbarBuilder);
 	TSharedPtr<IConcertSyncClient> pConcertSyncClient;
@@ -66,7 +68,8 @@ public:
 	void HandleActivityAddedOrUpdated(const FConcertClientInfo& InClientInfo, const FConcertSyncActivity& InActivity,
 		                              const FStructOnScope& InActivitySummary);
 	FReply JoinSession();
-	
+	FReply LaunchSession();
+
 	//void OnSessionConnectionChanged(IConcertClientSession& InSession, EConcertConnectionStatus ConnectionStatus);
 	FReply Save();
 	FReply Sync();

@@ -367,6 +367,21 @@ void FRealBandBackUpUIManagerImpl::CreateWidgetWindow()
 					 + SCanvas::Slot()
 						 .HAlign(HAlign_Fill)
 						 .VAlign(VAlign_Fill)
+						 .Size(FVector2D(120.0f, 50.0f))
+						 .Position(FVector2D(400.0f, 180.0f))
+						 [
+							 SAssignNew(pLaunchBtn, SButton)
+							 // SNew(SButton)
+						 .HAlign(HAlign_Center)
+						 .VAlign(VAlign_Center)
+						 .Text(FText::FromString("Launch Server"))
+						 .OnClicked(this, &FRealBandBackUpUIManagerImpl::LaunchSession)
+
+						 ]
+
+					 + SCanvas::Slot()
+						 .HAlign(HAlign_Fill)
+						 .VAlign(VAlign_Fill)
 						 .Size(FVector2D(70.0f, 40.0f))
 						 .Position(FVector2D(660.0f, 68.0f))
 						 [
@@ -493,8 +508,6 @@ void FRealBandBackUpUIManagerImpl::InitMultiUserEditorControls()
 				uint32 HostIp = 0;
 				HostAddr->GetIp(HostIp); // Will return in host order
 				FString iAddr = HostAddr->ToString(true);
-				iAddr.RemoveSpacesInline();
-				Setting.RemoveSpacesInline();
 				if (iAddr == Setting)
 				{
 					isHostMachine = true;
@@ -1225,6 +1238,13 @@ FReply FRealBandBackUpUIManagerImpl::JoinSession()
 	}
 	return FReply::Handled();
 }
+
+FReply FRealBandBackUpUIManagerImpl::LaunchSession()
+{
+	UE_LOG(LogTemp, Error, TEXT("======= Not yet . . . =============="));
+	return FReply::Handled();
+}
+
 
 
 bool FRealBandBackUpUIManagerImpl::InitSourceVersionControl()
