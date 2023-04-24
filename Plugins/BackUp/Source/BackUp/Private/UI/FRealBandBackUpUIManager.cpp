@@ -367,6 +367,21 @@ void FRealBandBackUpUIManagerImpl::CreateWidgetWindow()
 					 + SCanvas::Slot()
 						 .HAlign(HAlign_Fill)
 						 .VAlign(VAlign_Fill)
+						 .Size(FVector2D(120.0f, 50.0f))
+						 .Position(FVector2D(400.0f, 180.0f))
+						 [
+							 SAssignNew(pLaunchBtn, SButton)
+							 // SNew(SButton)
+						 .HAlign(HAlign_Center)
+						 .VAlign(VAlign_Center)
+						 .Text(FText::FromString("Launch Server"))
+						 .OnClicked(this, &FRealBandBackUpUIManagerImpl::LaunchSession)
+
+						 ]
+
+					 + SCanvas::Slot()
+						 .HAlign(HAlign_Fill)
+						 .VAlign(VAlign_Fill)
 						 .Size(FVector2D(70.0f, 40.0f))
 						 .Position(FVector2D(660.0f, 68.0f))
 						 [
@@ -493,8 +508,6 @@ void FRealBandBackUpUIManagerImpl::InitMultiUserEditorControls()
 				uint32 HostIp = 0;
 				HostAddr->GetIp(HostIp); // Will return in host order
 				FString iAddr = HostAddr->ToString(true);
-				iAddr.RemoveSpacesInline();
-				Setting.RemoveSpacesInline();
 				if (iAddr == Setting)
 				{
 					isHostMachine = true;
@@ -576,7 +589,9 @@ void FRealBandBackUpUIManagerImpl::InitMultiUserEditorControls()
 			}
 			else
 			{
+				//pLaunchBtn->SetEnabled(false);	// Jimin : delete btn if not host. 
 				pConcertSyncClient = MultiUserClientModule.GetClient();
+
 				if (pConcertSyncClient->GetConcertClient()->GetKnownServers().Num() > 0)
 				{
 					UE_LOG(LogTemp, Log, TEXT("=======Known Servers for Client Found=============="));
@@ -626,6 +641,8 @@ void FRealBandBackUpUIManagerImpl::OnSessionConnectionChanged(IConcertClientSess
 	{
 	    case EConcertConnectionStatus::Connected:
 		     pJoinBtn->SetEnabled(false);
+			 if(isHostMachine) pLaunchBtn->SetEnabled(false); // Jimin : check host and enabled btn
+
 			 if (pConcertSyncClient)
 			 {
 				 const TSharedPtr<IConcertClientWorkspace> WorkspacePtr = pConcertSyncClient->GetWorkspace();
@@ -637,9 +654,11 @@ void FRealBandBackUpUIManagerImpl::OnSessionConnectionChanged(IConcertClientSess
 		     break;
 		case EConcertConnectionStatus::Disconnected:
 			 pJoinBtn->SetEnabled(true);
+			 if(isHostMachine) pLaunchBtn->SetEnabled(true); // Jimin : check host and enabled btn
 			 break;
      
 	}
+	
 }
 
 
@@ -1227,6 +1246,35 @@ FReply FRealBandBackUpUIManagerImpl::JoinSession()
 }
 
 
+// Jimin : Check host and start server. 
+FReply FRealBandBackUpUIManagerImpl::LaunchSession()
+{
+	IMultiUserClientModule& MultiUserClientModule = IMultiUserClientModule::Get();
+
+	if (!isHostMachine)
+	{ 
+		UE_LOG(LogTemp, Error, TEXT("=======Fail to Launch Server ... You're not host ... ==============")); 
+		FMessageDialog::Open(EAppMsgType::Ok, FText::FromString(L"You're not host ... "));
+	}
+
+	else if(MultiUserClientModule.IsConcertServerRunning())
+	{
+		UE_LOG(LogTemp, Error, TEXT("=======Fail to Launch Server ... Server is already running ... =============="));
+		FMessageDialog::Open(EAppMsgType::Ok, FText::FromString(L"Server is already running ..."));
+	}
+
+	else
+	{
+		UE_LOG(LogTemp, Log, TEXT("=======HOST machine ...Launch Concert Server =============="));
+		pURealBandConfig->FindOrLaunchConcertServer();
+		pConcertSyncClient = pURealBandConfig->GetBackupClient();
+	}
+	
+	return FReply::Handled();
+	}
+
+
+
 bool FRealBandBackUpUIManagerImpl::InitSourceVersionControl()
 {
 
@@ -1399,7 +1447,7 @@ void FRealBandBackUpUIManagerImpl::GetPythonPath(FString& oPythonPath)
 						break;
 					}
 					RegCloseKey(hSubKey);
-				}
+				}	
 				VersionLength = ARRAYSIZE(Version);
 			}
 			RegCloseKey(hKey);
