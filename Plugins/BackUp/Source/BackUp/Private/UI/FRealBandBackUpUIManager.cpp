@@ -470,6 +470,7 @@ void FRealBandBackUpUIManagerImpl::InitMultiUserEditorControls()
 //	if (pDialogMainWindow)
 	{
 		//FString Role = TEXT("MultiUser");
+		IMultiUserClientModule& MultiUserClientModule = IMultiUserClientModule::Get();
 
 		// check for Host 
 	
@@ -477,12 +478,18 @@ void FRealBandBackUpUIManagerImpl::InitMultiUserEditorControls()
 		FConfigFile* EngineConfig = GConfig ? GConfig->FindConfigFileWithBaseName(FName(TEXT("Engine"))) : nullptr;
 		if (EngineConfig)
 		{
+			FConcertFrontendStyle::Initialize();
+			
+			TArray<FString> fileNames;
+			GConfig->GetConfigFilenames(fileNames);
 			TArray<FString> Settings;
 			FString Setting;
 			// Unicast endpoint setting
 			EngineConfig->GetString(TEXT("/Script/UdpMessaging.UdpMessagingSettings"), TEXT("UnicastEndpoint"), Setting);
 			if (Setting != "0.0.0.0:0" && !Setting.IsEmpty())
 			{
+				FString SourceEngineConfigDir = FPaths::ConvertRelativePathToFull(EngineConfig->SourceEngineConfigDir);
+			
 				//check if its the same as my hostname 
 				FString hostName = FString(FPlatformProcess::ComputerName());
 			
@@ -504,14 +511,33 @@ void FRealBandBackUpUIManagerImpl::InitMultiUserEditorControls()
 				{
 					isHostMachine = false;
 					UE_LOG(LogTemp, Display, TEXT("%hs: ==CLIENT MACHINE =="), __FUNCTION__);
+					// For client machine we disable the Multi User Option Menus if available
+					UConcertClientConfig* userSettings = NewObject<UConcertClientConfig>();
+					userSettings->bInstallEditorToolbarButton = false;
+					MultiUserClientModule.GetClient()->GetConcertClient()->Configure(userSettings);
+					UToolMenu* pMenu = UToolMenus::Get()->FindMenu("LevelEditor.LevelEditorToolBar.User");
+					if (pMenu)
+					{
+						FToolMenuSection* pMenuSection = pMenu->FindSection("Concert");
+						TArray<const UToolMenu*> pSubMenu = pMenu->GetSubMenuChain();
+						pMenu->RemoveSection("Concert");
+						bool bIsRefreshed = UToolMenus::Get()->RefreshMenuWidget("LevelEditor.LevelEditorToolBar.User");
+						if (bIsRefreshed)
+						{
+							UE_LOG(LogTemp, Display, TEXT("%hs: ==Concert Menu diabled for Client machine=="), __FUNCTION__);
+						}
+					}
+
 				}
 
 			}
 
 		}
 
-		FConcertFrontendStyle::Initialize();
-		IMultiUserClientModule& MultiUserClientModule = IMultiUserClientModule::Get();
+		if (!isHostMachine)
+		{
+			UToolMenus::Get()->RemoveSection("LevelEditor.LevelEditorToolBar.User", "Multi-User Menu");
+		}
 		
 		if (MultiUserClientModule.IsConcertServerRunning())
 		{
@@ -626,6 +652,10 @@ void FRealBandBackUpUIManagerImpl::OnSessionConnectionChanged(IConcertClientSess
 	{
 	    case EConcertConnectionStatus::Connected:
 		     pJoinBtn->SetEnabled(false);
+			 {
+				 IMultiUserClientModule& MultiUserClientModule = IMultiUserClientModule::Get();
+				 MultiUserClientModule.OpenBrowser();
+			 }
 			 if (pConcertSyncClient)
 			 {
 				 const TSharedPtr<IConcertClientWorkspace> WorkspacePtr = pConcertSyncClient->GetWorkspace();
