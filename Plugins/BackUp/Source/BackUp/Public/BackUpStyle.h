@@ -23,7 +23,7 @@ public:
 
 	static void SetIcon(const FString& StyleName, const FString& ResourcePath);
 	static void SetSVGIcon(const FString& StyleName, const FString& ResourcePath);
-
+	static void SetMenuLogo(const FString& StyleName, const FString& ResourcePath);
 
 private:
 

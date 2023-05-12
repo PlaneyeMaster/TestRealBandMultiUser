@@ -61,7 +61,8 @@ TSharedRef< FSlateStyleSet > FBackUpStyle::Create()
 		.SetColorAndOpacity(FSlateColor(FLinearColor(100.4352f, 100.3647f, 100.8862f)))
 		.SetFont(TTF_FONT("Pretendard-Black", 40)));
 
-	Style->Set("BackUp.PluginAction", new IMAGE_BRUSH_SVG(TEXT("PlaceholderButtonIcon"), Icon20x20));
+	//Style->Set("BackUp.PluginAction", new IMAGE_BRUSH_SVG(TEXT("PlaceholderButtonIcon"), Icon20x20));
+	Style->Set("BackUp.PluginAction", new IMAGE_BRUSH_SVG(TEXT("icon_MultiEdit"), Icon20x20));
 	return Style;
 }
 
@@ -80,7 +81,7 @@ const ISlateStyle& FBackUpStyle::Get()
 
 void FBackUpStyle::SetIcon(const FString& StyleName, const FString& ResourcePath)
 {
-	FSlateStyleSet* Style = MSStyleInstance.Get();
+	FSlateStyleSet* Style = StyleInstance.Get();
 
 	FString Name("RealBand");
 	Name = Name + "." + StyleName;
@@ -92,9 +93,23 @@ void FBackUpStyle::SetIcon(const FString& StyleName, const FString& ResourcePath
 	FSlateApplication::Get().GetRenderer()->ReloadTextureResources();
 }
 
+void FBackUpStyle::SetMenuLogo(const FString& StyleName, const FString& ResourcePath)
+{
+	FSlateStyleSet* Style = StyleInstance.Get();
+
+	FString Name("RealBand");
+	Name = Name + "." + StyleName;
+	Style->Set(*Name, new IMAGE_BRUSH(ResourcePath, Icon20x20));
+
+	//	Name += ".Small";
+	//	Style->Set(*Name, new IMAGE_BRUSH(ResourcePath, Icon20x20));
+
+	FSlateApplication::Get().GetRenderer()->ReloadTextureResources();
+}
+
 void FBackUpStyle::SetSVGIcon(const FString& StyleName, const FString& ResourcePath)
 {
-	FSlateStyleSet* Style = MSStyleInstance.Get();
+	FSlateStyleSet* Style = StyleInstance.Get();
 
 	FString Name("RealBand");
 	Name = Name + "." + StyleName;

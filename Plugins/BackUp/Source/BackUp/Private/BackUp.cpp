@@ -30,6 +30,10 @@ void FBackUpModule::StartupModule()
 		FCanExecuteAction());
 
 	UToolMenus::RegisterStartupCallback(FSimpleMulticastDelegate::FDelegate::CreateRaw(this, &FBackUpModule::RegisterMenus));
+
+	pFRealBandBackUpUIManager = MakeShareable(new FRealBandBackUpUIManager);
+	pFRealBandBackUpUIManager->Setup();
+	
 }
 
 void FBackUpModule::ShutdownModule()
@@ -61,7 +65,7 @@ void FBackUpModule::PluginButtonClicked()
 							FText::FromString(TEXT("BackUp.cpp"))
 					   );
 	//FMessageDialog::Open(EAppMsgType::Ok, DialogText);
-
+	//SetupMenuItem()
 	FRealBandBackUpUIManager::Initialize();
 	//TSharedRef<IHttpRequest> Request = FHttpModule::Get().CreateRequest();
 	//Request->SetVerb("POST");

@@ -130,10 +130,51 @@ FRealBandBackUpUIManagerImpl::~FRealBandBackUpUIManagerImpl()
 void FRealBandBackUpUIManagerImpl::Initialize()
 {
 	// Menu Setup
-//	//SetupMenuItem();
+	//SetupMenuItem();
 	//Create the MainWindow
 	CreateWidgetWindow();
 
+}
+
+void FRealBandBackUpUIManager::Setup()
+{
+	FBackUpStyle::SetIcon("Logo", "icon_MultiEdit80X80");
+	FBackUpStyle::SetIcon("ContextLogo", "icon_MultiEdit32X32");
+	FBackUpStyle::SetMenuLogo("MenuLogo", "icon_MultiEdit_20");
+	//FRealBandStyle::SetSVGIcon("MenuLogo", "QuixelBridgeB");
+	FLevelEditorModule& LevelEditorModule = FModuleManager::LoadModuleChecked<FLevelEditorModule>(LEVELEDITOR_MODULE_NAME);
+	TSharedPtr<FExtender> ToolbarExtender = MakeShareable(new FExtender);
+	ToolbarExtender->AddToolBarExtension("Settings", EExtensionHook::After, nullptr, FToolBarExtensionDelegate::CreateRaw(this, &FRealBandBackUpUIManager::FillToolbar));
+
+	// Adding Bridge entry to Quick Content menu.
+	UToolMenu* AddMenu = UToolMenus::Get()->ExtendMenu("LevelEditor.LevelEditorToolBar.AddQuickMenu");
+	FToolMenuSection& Section = AddMenu->FindOrAddSection("Content");
+	Section.AddMenuEntry("OpenRealBand",
+		LOCTEXT("OpenRealBand_Label", "CustomMultiUserEditor"),
+		LOCTEXT("OpenRealBand_Desc", "Opens the Custom MultiUser Editor ."),
+		FSlateIcon(FName("BackUpStyle"), "RealBand.MenuLogo"),
+		FUIAction(FExecuteAction::CreateStatic(&FRealBandBackUpUIManager::Initialize), FCanExecuteAction())
+	).InsertPosition = FToolMenuInsert("ImportContent", EToolMenuInsertType::After);
+
+//	FRealBandBackUpUIManagerImpl::SetupMenuItem();
+}
+
+
+void FRealBandBackUpUIManager::FillToolbar(FToolBarBuilder& ToolbarBuilder)
+{
+	ToolbarBuilder.BeginSection(TEXT("RealBandMultiUserEditor"));
+	{
+		/*ToolbarBuilder.AddToolBarButton(
+			FUIAction(FExecuteAction::CreateRaw(this, &FRealBandBackUpUIManagerImpl::CreateWidgetWindow)),
+			FName(TEXT("RealBand MultiUser Editor Backup")),
+			LOCTEXT("QMSLiveLink_label", "RealBand MultiUser Editor Backup"),
+			LOCTEXT("WorldProperties_ToolTipOverride", "Megascans Link"),
+			FSlateIcon(FBackUpStyle::GetStyleSetName(), "icon_MultiEdit32X32"),
+			EUserInterfaceActionType::Button,
+			FName(TEXT("RealBand MultiUser Editor Backup"))
+		);*/
+	}
+	ToolbarBuilder.EndSection();
 }
 //
 //
@@ -196,13 +237,16 @@ void FRealBandBackUpUIManager::Initialize()
 ////
 void FRealBandBackUpUIManagerImpl::SetupMenuItem()
 {
-    FBackUpStyle::SetIcon("Logo", "Logo80x80");
-	FBackUpStyle::SetIcon("ContextLogo", "Logo32x32");
+    //FBackUpStyle::SetIcon("Logo", "icon_MultiEdit80X80");
+	//FBackUpStyle::SetIcon("ContextLogo", "icon_MultiEdit32X32");
     //FRealBandStyle::SetSVGIcon("MenuLogo", "QuixelBridgeB");
-	FLevelEditorModule& LevelEditorModule = FModuleManager::LoadModuleChecked<FLevelEditorModule>(LEVELEDITOR_MODULE_NAME);
-	TSharedPtr<FExtender> ToolbarExtender = MakeShareable(new FExtender);
-	ToolbarExtender->AddToolBarExtension("Settings", EExtensionHook::After, nullptr, 
-		                                 FToolBarExtensionDelegate::CreateRaw(this, &FRealBandBackUpUIManagerImpl::FillToolbar));
+	//FLevelEditorModule& LevelEditorModule = FModuleManager::LoadModuleChecked<FLevelEditorModule>(LEVELEDITOR_MODULE_NAME);
+	//TSharedPtr<FExtender> ToolbarExtender = MakeShareable(new FExtender);
+
+	
+//	ToolbarExtender->AddToolBarExtension("Settings", EExtensionHook::After, nullptr,
+//		                                  FToolBarExtensionDelegate::CreateStatic(&FRealBandBackUpUIManagerImpl::FillToolbar));
+		                                 //FToolBarExtensionDelegate::CreateRaw(FRealBandBackUpUIManagerImpl::FillToolbar));
 ////	LevelEditorModule.GetToolBarExtensibilityManager()->AddExtender(ToolbarExtender);
 ////
 ////	// Adding Bridge entry to Quick Content menu.
@@ -220,15 +264,15 @@ void FRealBandBackUpUIManagerImpl::FillToolbar(FToolBarBuilder& ToolbarBuilder)
 {
     	ToolbarBuilder.BeginSection(TEXT("RealBandMultiUserEditor"));
 	    {
-    		ToolbarBuilder.AddToolBarButton(
+    	/*	ToolbarBuilder.AddToolBarButton(
 			FUIAction(FExecuteAction::CreateRaw(this, &FRealBandBackUpUIManagerImpl::CreateWidgetWindow)),
 			FName(TEXT("RealBand MultiUser Editor Backup")),
 			LOCTEXT("QMSLiveLink_label", "RealBand MultiUser Editor Backup"),
 			LOCTEXT("WorldProperties_ToolTipOverride", "Megascans Link"),
-			FSlateIcon(FBackUpStyle::GetStyleSetName(), "RealBand.Logo"),
+			FSlateIcon(FBackUpStyle::GetStyleSetName(), "icon_MultiEdit32X32"),
 			EUserInterfaceActionType::Button,
 			FName(TEXT("RealBand MultiUser Editor Backup"))
-		);
+		);*/
     	}
     	ToolbarBuilder.EndSection();
 }
