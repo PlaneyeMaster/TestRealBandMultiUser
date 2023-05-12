@@ -6,7 +6,7 @@
 
 void FBackUpCommands::RegisterCommands()
 {
-	UI_COMMAND(PluginAction, "BackUp", "Execute BackUp action", EUserInterfaceActionType::Button, FInputChord());
+	UI_COMMAND(PluginAction, "BackUp", "Custom MultiUser Editor Plugin", EUserInterfaceActionType::Button, FInputChord());
 }
 
 #undef LOCTEXT_NAMESPACE

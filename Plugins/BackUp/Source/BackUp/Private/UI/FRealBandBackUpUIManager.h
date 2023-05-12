@@ -38,8 +38,8 @@ private:
 	TSharedPtr<SOverlay> pOverlay;
 	TSharedPtr<SCanvas> pCanvas;
 	TSharedPtr<SButton> pJoinBtn;
-	void SetupMenuItem();
-	void FillToolbar(FToolBarBuilder& ToolbarBuilder);
+	//void SetupMenuItem();
+	
 	TSharedPtr<IConcertSyncClient> pConcertSyncClient;
 	TSharedPtr<IConcertSessionBrowserController> SessionController;
 	URealBandConfig* pURealBandConfig;
@@ -54,6 +54,8 @@ public:
 
 	virtual ~FRealBandBackUpUIManagerImpl();
 	void Initialize();
+	static void SetupMenuItem();
+	static void FillToolbar(FToolBarBuilder& ToolbarBuilder);
 	void CreateWidgetWindow();
 	bool InitSourceVersionControl();
 	void InitMultiUserEditorControls();
@@ -78,6 +80,8 @@ class FRealBandBackUpUIManager
 {
 public:
 	static void Initialize();
+	void Setup();
+	void FillToolbar(FToolBarBuilder& ToolbarBuilder);
 	//static bool DisplayStartWindow();
 	static TSharedPtr<FRealBandBackUpUIManagerImpl> Instance;
 	~FRealBandBackUpUIManager();
