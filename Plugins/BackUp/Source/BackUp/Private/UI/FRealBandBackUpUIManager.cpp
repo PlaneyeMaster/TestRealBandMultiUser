@@ -758,7 +758,6 @@ void FRealBandBackUpUIManagerImpl::HandleActivityAddedOrUpdated(const FConcertCl
 void FRealBandBackUpUIManagerImpl::HandleSessionConnectionChanged(IConcertClientSession& InSession,
 	                                                               EConcertConnectionStatus ConnectionStatus)
 {
-	int debug = 1;
 
 	if (ConnectionStatus == EConcertConnectionStatus::Disconnected)
 	{
@@ -1158,7 +1157,35 @@ FReply FRealBandBackUpUIManagerImpl::Save()
 		int32 ReturnCode = -1;
 		FString stdOut;
 		FString Error;
-		//FPlatformProcess::ExecProcess(TEXT("/bin/sh"), *Command, &Result);
+		// git-lfs init
+		FPlatformProcess::ExecProcess(TEXT("git-lfs"), TEXT("install"), &ReturnCode, &stdOut, &Error);
+		if (ReturnCode != 0)
+		{
+			std::cerr << "git-lfs install  failed with exit code " << ReturnCode << std::endl;
+			UE_LOG(LogTemp, Error, TEXT("git-lfs install  failed "));
+			//return FReply::Handled();
+
+		}
+
+		FPlatformProcess::ExecProcess(TEXT("git-lfs"), TEXT("track *.uasset"), &ReturnCode, &stdOut, &Error);
+		if (ReturnCode != 0)
+		{
+			std::cerr << "git-lfs install  failed with exit code " << ReturnCode << std::endl;
+			UE_LOG(LogTemp, Error, TEXT("git-lfs install  failed "));
+			//return FReply::Handled();
+
+		}
+
+		FPlatformProcess::ExecProcess(TEXT("git"), TEXT("add .gitignore"), &ReturnCode, &stdOut, &Error);
+		if (ReturnCode != 0)
+		{
+			std::cerr << "git add  failed with exit code " << ReturnCode << std::endl;
+			UE_LOG(LogTemp, Error, TEXT("git add gitignore  failed "));
+			//return FReply::Handled();
+
+		}
+
+
 		FPlatformProcess::ExecProcess(*Command, *gArguments, &ReturnCode, &stdOut, &Error);
 		BranchName = stdOut.TrimEnd().TrimStart();
 
