@@ -1176,7 +1176,7 @@ FReply FRealBandBackUpUIManagerImpl::Save()
 
 		}
 
-		FPlatformProcess::ExecProcess(TEXT("git"), TEXT("add .gitignore"), &ReturnCode, &stdOut, &Error);
+		FPlatformProcess::ExecProcess(TEXT("git"), TEXT("add .gitattributes"), &ReturnCode, &stdOut, &Error);
 		if (ReturnCode != 0)
 		{
 			std::cerr << "git add  failed with exit code " << ReturnCode << std::endl;
