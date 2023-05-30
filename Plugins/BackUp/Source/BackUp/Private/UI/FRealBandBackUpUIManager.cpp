@@ -1209,11 +1209,14 @@ FReply FRealBandBackUpUIManagerImpl::Save()
 		// push the changes
 		std::string params = "push origin ";
 		params.append(TCHAR_TO_UTF8(*BranchName));
-		std::string fullCommand = myString + " " + params;
-	    int result = system(fullCommand.c_str());
-		if (result != 0)
+		//std::string fullCommand = myString + " " + params;
+		std::wstring fullCommand(myString.begin(),myString.end());
+		std::wstring wParams(params.begin(), params.end());
+		FPlatformProcess::ExecProcess(fullCommand.c_str(), wParams.c_str(), &ReturnCode, &stdOut, &Error);
+	    //int result = system(fullCommand.c_str());
+		if (ReturnCode != 0)
 		{
-		    std::cerr << "git push failed with exit code " << result << std::endl;
+		    std::cerr << "git push failed with exit code " << ReturnCode << std::endl;
 			UE_LOG(LogTemp, Error, TEXT("Failed to push changes to repository...try manually "));
 			return FReply::Handled();
 		}
