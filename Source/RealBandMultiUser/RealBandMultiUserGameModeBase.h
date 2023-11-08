@@ -13,5 +13,7 @@ UCLASS()
 class REALBANDMULTIUSER_API ARealBandMultiUserGameModeBase : public AGameModeBase
 {
 	GENERATED_BODY()
+protected:
+	
 	
 };

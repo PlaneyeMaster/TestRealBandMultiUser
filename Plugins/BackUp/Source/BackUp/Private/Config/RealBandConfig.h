@@ -59,6 +59,11 @@ public:
 	void LaunchConcertServer(const FString & );
 	void FindAppropriateServer();
 	void JoinSession();
+	void UpdateLevel(ULevel*, ULevel*, UWorld*);
+	void LevelAddedToWorld(ULevel*, UWorld*);
+	void WorldLoaded(UWorld* /*World*/, const UWorld::InitializationValues /*IVS*/);
+	void MapLoaded(UWorld*);
 	TSharedPtr<IConcertSyncClient> GetBackupClient();
 	TSharedPtr<IConcertSyncClient> CreateConcertClient();
+	void Save(const FAssetData& iAsset);
 };

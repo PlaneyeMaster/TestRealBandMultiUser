@@ -25,6 +25,15 @@
 #include "../../../../Engine/Plugins/Developer\Concert\ConcertUI\ConcertSharedSlate\Source\ConcertSharedSlate\Public/ConcertFrontendStyle.h"
 #include "IConcertModule.h"
 
+#include "ConcertSyncSettings.h"
+
+#include "ConcertTransactionEvents.h"
+#include "IConcertClientTransactionBridge.h"
+#include "AssetToolsModule.h"
+#include "AssetRegistry.h"
+#include "AssetRegistry/AssetRegistryModule.h"
+
+
 namespace MultiUsrConfigUtl
 {
 	FString AppendRandomNumbersToString(const FString InString, uint8 NumberToAppend = 6)
@@ -45,11 +54,17 @@ URealBandConfig::URealBandConfig()
 }
 
 URealBandConfig::~URealBandConfig()
+
 {
 	/*if (BackupClient->GetConcertClient()->IsStarted())
 	{
 		BackupClient->Shutdown();
 	}*/
+}
+
+void URealBandConfig::Save(const FAssetData& iAsset)
+{
+
 }
 
 
@@ -262,7 +277,10 @@ bool URealBandConfig::FindOrLaunchConcertServer()
 {
 	IMultiUserClientModule& MultiUserClientModule = IMultiUserClientModule::Get();
 	if (MultiUserClientModule.IsConcertServerRunning())
+	{
+		FDelegateHandle OnPostWorldInitializationHandle = FWorldDelegates::OnPostWorldInitialization.AddUObject(this, &URealBandConfig::WorldLoaded);
 		return true;
+	}
 
 	if (!MultiUserClientModule.IsConcertServerRunning())
 	{
@@ -305,14 +323,44 @@ bool URealBandConfig::FindOrLaunchConcertServer()
 			{
 				ServerTrackingData.MultiUserServerHandle = ServerHandle.GetValue();
 			}
-
-			
 		}
 
 		//LaunchConcertServer(BackupServerName);
 		BackupClient->GetConcertClient()->StartDiscovery();
 		
+		UWorld* World = GEngine->GetWorldContexts()[0].World();
+		ULevel *pCurrentLevel = World->GetCurrentLevel();
+		ULevel *pLevel =   World->GetLevel(0);
+	//	FWorldDelegates::OnCurrentLevelChanged.AddSP(this, &URealBandConfig::UpdateLevel, World->GetCurrentLevel(), World->GetCurrentLevel(), World);
+		FWorldDelegates::OnCurrentLevelChanged.AddUObject(this, &URealBandConfig::UpdateLevel);
 		
+		FWorldDelegates::LevelAddedToWorld.AddUObject(this, &URealBandConfig::LevelAddedToWorld);
+
+		FWorldDelegates::LevelRemovedFromWorld.AddUObject(this, &URealBandConfig::LevelAddedToWorld);
+
+		FCoreUObjectDelegates::PostLoadMapWithWorld.AddUObject(this, &URealBandConfig::MapLoaded);
+
+		FDelegateHandle OnPostWorldInitializationHandle = FWorldDelegates::OnPostWorldInitialization.AddUObject(this, &URealBandConfig::WorldLoaded);
+
+		for (ULevel* iLevel : World->GetLevels())
+		{
+			int debug = 1;
+			
+
+
+			//StreamingLevel->OnLevelShown.Add(FRealBandBackUpUIManagerImpl::OnLevelShown);
+		//	StreamingLevel->OnLevelShown.AddUniqueDynamic(this, &FRealBandBackUpUIManagerImpl::OnLevelShown);
+		//	FWorldDelegates::LevelAddedToWorld.AddLambda([this, StreamingLevel, World](const ULevelStreaming& world)
+		//		{
+				//	StreamingLevel->BroadcastLevelLoadedStatus(World, StreamingLevel->GetPackage()->GetFName(), true);
+		//		});
+
+
+
+			//(this, &FRealBandBackUpUIManagerImpl::OnLevelChangedCallback, true);
+		//	StreamingLevel->OnLevelLoaded.Add(FRealBandBackUpUIManagerImpl::OnLevelChangedCallback);
+		}
+
 	}
 	return false;
 	// Ensure we have the client, otherwise we can't do anything
@@ -369,6 +417,31 @@ bool URealBandConfig::FindOrLaunchConcertServer()
 
 	//ConcertClient->Startup();
 //	ConcertClient->StartDiscovery();
+}
+
+
+void URealBandConfig::UpdateLevel(ULevel* InNewLevel, ULevel* InOldLevel, UWorld* InWorld)
+{
+	int test = 1;
+}
+
+void URealBandConfig::LevelAddedToWorld(ULevel* iLevel, UWorld* iWorld)
+{
+	int test = 1;
+}
+
+void URealBandConfig::WorldLoaded(UWorld* iWorld, const UWorld::InitializationValues IVS)
+{
+	int test = 1;
+	if (iWorld)
+	{
+		//iWorld->BroadcastLevelsChanged();
+	}
+}
+
+void URealBandConfig::MapLoaded(UWorld* iWorld)
+{
+
 }
 
 TSharedPtr<IConcertSyncClient> URealBandConfig::GetBackupClient()

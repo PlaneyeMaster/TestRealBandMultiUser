@@ -29,7 +29,9 @@ public class BackUp : ModuleRules
 				// ... add other private include paths required here ...
 				Path.Combine(EngineDirectory, @"Plugins/Developer/Concert/ConcertApp/MultiUserClient/Source/MultiUserClient/Public"),
                 Path.Combine(EngineDirectory, @"Plugins/Messaging/UdpMessaging/Source/UdpMessaging/Public/Shared"),
-                Path.Combine(EngineDirectory, @"Plugins/Developer/GitSourceControl/Source/GitSourceControl/Private/")
+                Path.Combine(EngineDirectory, @"Plugins/Developer/GitSourceControl/Source/GitSourceControl/Private"),
+                Path.Combine(EngineDirectory, @"Source/Runtime/AssetRegistry/Private")
+                //C:\Program Files\Epic Games\UE_5.1\Engine\Source\Runtime\AssetRegistry\Private
             }
 			);
 
@@ -52,7 +54,8 @@ public class BackUp : ModuleRules
         PublicDependencyModuleNames.AddRange(
 			new string[]
 			{
-				"Core",
+                "AssetRegistry",
+                "Core",
                 "CoreUObject",
                 "EditorSubsystem",
                 "Engine",
@@ -83,6 +86,7 @@ public class BackUp : ModuleRules
 		PrivateDependencyModuleNames.AddRange(
 			new string[]
 			{
+                "AssetRegistry",
 				"Projects",
 				"InputCore",
 				"EditorFramework",
